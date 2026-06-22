@@ -1,36 +1,35 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CoverPilot
+
+Singapore's AI insurance evidence desk. Helps users understand policy documents, compare sales statements against source text, and prepare questions for licensed advisers — without recommending what to buy, keep, cancel, or switch.
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+cp .env.example .env.local
+# add your OPENAI_API_KEY to .env.local
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Core Routes
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Route | Purpose |
+|---|---|
+| `/` | Home — Decode / Check / Prepare modules |
+| `/decode` | Extract structured facts from a policy document |
+| `/check` | Compare statements against source text |
+| `/prepare` | Generate meeting-prep report and adviser questions |
 
-## Learn More
+## API Endpoints
 
-To learn more about Next.js, take a look at the following resources:
+| Endpoint | Description |
+|---|---|
+| `POST /api/policy/extract` | Returns policy facts (seeded or PDF) |
+| `POST /api/statements/compare` | AI-powered statement vs document comparison + calculations |
+| `POST /api/report/generate` | Generates full meeting-prep report |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Compliance
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+CoverPilot does not recommend what to buy, keep, cancel, or switch. The Decision Firewall blocks any prompt requesting financial advice.
