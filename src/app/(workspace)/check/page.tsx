@@ -5,10 +5,16 @@ import type {
   CompareResponse,
   SourceComparison,
   CalculationCard,
+  PolicyFact,
   UserStatement,
 } from "@/types";
 import { SEEDED_FACTS, SEEDED_STATEMENTS } from "@/data/seeded-policy";
 import Link from "next/link";
+import {
+  loadPolicyWorkspace,
+  saveCheckWorkspace,
+  type PolicyWorkspaceSource,
+} from "@/lib/workspace-session";
 
 const STATE_LABELS: Record<SourceComparison["state"], string> = {
   "matches-document": "Matches document",
@@ -34,6 +40,11 @@ const LOADING_STEPS = [
 ];
 
 export default function CheckPage() {
+  const [policyWorkspace] = useState(() => loadPolicyWorkspace());
+  const [facts] = useState<PolicyFact[]>(() => policyWorkspace?.facts ?? SEEDED_FACTS);
+  const [policySource] = useState<PolicyWorkspaceSource>(
+    () => policyWorkspace?.source ?? "sample"
+  );
   const [statements, setStatements] = useState<UserStatement[]>(SEEDED_STATEMENTS);
   const [result, setResult] = useState<CompareResponse | null>(null);
   const [loadingStep, setLoadingStep] = useState<string | null>(null);
@@ -56,10 +67,13 @@ export default function CheckPage() {
       const res = await fetch("/api/statements/compare", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ facts: SEEDED_FACTS, statements }),
+        body: JSON.stringify({ facts, statements }),
       });
       if (!res.ok) throw new Error("Comparison failed. Please try again.");
       const data: CompareResponse = await res.json();
+      if (!data.blocked) {
+        saveCheckWorkspace(statements, data.comparisons, data.calculations);
+      }
       setResult(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
@@ -91,6 +105,19 @@ export default function CheckPage() {
           <h1 className="text-2xl font-bold">🔍 Check</h1>
           <p className="text-slate-400 mt-1">
             Compare statements from your sales conversation against the policy document.
+          </p>
+        </div>
+
+        <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
+          <p className="text-slate-300 text-sm font-medium">
+            Active policy: {facts.length} facts loaded
+          </p>
+          <p className="text-slate-500 text-xs mt-1">
+            {policySource === "uploaded"
+              ? "Using facts extracted from the uploaded policy in Decode."
+              : policySource === "sample-fallback"
+                ? "Using sample facts because the uploaded PDF could not be extracted reliably."
+                : "Using the sample policy. Decode a policy first to run this check on uploaded facts."}
           </p>
         </div>
 

@@ -1,9 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import type { ReportResponse } from "@/types";
+import type {
+  CalculationCard,
+  ReportResponse,
+  SourceComparison,
+  UserStatement,
+} from "@/types";
 import { SEEDED_FACTS, SEEDED_STATEMENTS } from "@/data/seeded-policy";
 import Link from "next/link";
+import {
+  loadCheckWorkspace,
+  loadPolicyWorkspace,
+  type PolicyWorkspaceSource,
+} from "@/lib/workspace-session";
 
 const LOADING_STEPS = [
   "Reading policy…",
@@ -14,9 +24,24 @@ const LOADING_STEPS = [
 ];
 
 export default function PreparePage() {
+  const [policyWorkspace] = useState(() => loadPolicyWorkspace());
+  const [checkWorkspace] = useState(() => loadCheckWorkspace());
   const [report, setReport] = useState<ReportResponse["report"] | null>(null);
   const [loadingStep, setLoadingStep] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [facts] = useState(() => policyWorkspace?.facts ?? SEEDED_FACTS);
+  const [statements] = useState<UserStatement[]>(
+    () => checkWorkspace?.statements ?? SEEDED_STATEMENTS
+  );
+  const [policySource] = useState<PolicyWorkspaceSource>(
+    () => policyWorkspace?.source ?? "sample"
+  );
+  const [savedComparisons] = useState<SourceComparison[] | null>(
+    () => checkWorkspace?.comparisons ?? null
+  );
+  const [savedCalculations] = useState<CalculationCard[] | null>(
+    () => checkWorkspace?.calculations ?? null
+  );
 
   async function generateReport() {
     setError(null);
@@ -31,22 +56,29 @@ export default function PreparePage() {
     }, 1400);
 
     try {
-      const compareRes = await fetch("/api/statements/compare", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ facts: SEEDED_FACTS, statements: SEEDED_STATEMENTS }),
-      });
-      if (!compareRes.ok) throw new Error("Comparison failed. Please try again.");
-      const compareData = await compareRes.json();
-      if (compareData.blocked) throw new Error(compareData.blockReason);
+      let comparisons = savedComparisons;
+      let calculations = savedCalculations;
+
+      if (!comparisons || !calculations) {
+        const compareRes = await fetch("/api/statements/compare", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ facts, statements }),
+        });
+        if (!compareRes.ok) throw new Error("Comparison failed. Please try again.");
+        const compareData = await compareRes.json();
+        if (compareData.blocked) throw new Error(compareData.blockReason);
+        comparisons = compareData.comparisons;
+        calculations = compareData.calculations;
+      }
 
       const reportRes = await fetch("/api/report/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          facts: SEEDED_FACTS,
-          comparisons: compareData.comparisons,
-          calculations: compareData.calculations,
+          facts,
+          comparisons,
+          calculations,
         }),
       });
       if (!reportRes.ok) throw new Error("Report generation failed. Please try again.");
@@ -74,6 +106,23 @@ export default function PreparePage() {
           <p className="text-slate-400 mt-1">
             Your meeting-prep report — sourced facts, calculations, and questions
             for your licensed adviser.
+          </p>
+        </div>
+
+        <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
+          <p className="text-slate-300 text-sm font-medium">
+            Report source: {facts.length} policy facts
+          </p>
+          <p className="text-slate-500 text-xs mt-1">
+            {savedComparisons && savedCalculations
+              ? "Using the latest statement checks from the Check page."
+              : "No saved statement checks found. Prepare will run the sample statements before generating the report."}
+            {" "}
+            {policySource === "uploaded"
+              ? "Policy facts came from an uploaded PDF."
+              : policySource === "sample-fallback"
+                ? "Policy facts are sample fallback data."
+                : "Policy facts are from the sample policy."}
           </p>
         </div>
 

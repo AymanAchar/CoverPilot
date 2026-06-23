@@ -3,6 +3,11 @@
 import { useRef, useState } from "react";
 import type { PolicyFact } from "@/types";
 import Link from "next/link";
+import {
+  clearPolicyWorkspace,
+  savePolicyWorkspace,
+  type PolicyWorkspaceSource,
+} from "@/lib/workspace-session";
 
 const LOADING_STEPS = [
   "Reading policy…",
@@ -61,8 +66,14 @@ export default function DecodePage() {
 
       if (!res.ok) throw new Error("Could not read the document. Please try again.");
       const data = await res.json();
+      const source: PolicyWorkspaceSource = data.fallback
+        ? "sample-fallback"
+        : mode === "seeded"
+          ? "sample"
+          : "uploaded";
 
       if (data.fallback) setUsedFallback(true);
+      savePolicyWorkspace(data.facts, source);
       setFacts(data.facts);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
@@ -202,7 +213,11 @@ export default function DecodePage() {
                 Check statements →
               </Link>
               <button
-                onClick={() => { setFacts(null); setUsedFallback(false); }}
+                onClick={() => {
+                  clearPolicyWorkspace();
+                  setFacts(null);
+                  setUsedFallback(false);
+                }}
                 className="text-slate-400 hover:text-white text-sm px-4 py-2.5"
               >
                 Load different policy
