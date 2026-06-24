@@ -40,3 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .gstack/
+
+# Local training/reference policy PDFs. Keep README tracked, keep documents local.
+sample-policy-illustrations/*.pdf

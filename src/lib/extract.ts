@@ -10,6 +10,8 @@ Rules you must follow:
 - If a value is not present in the text, do not include it.
 - For non-guaranteed values, always note they are non-guaranteed in the label or value.
 - Never make recommendations or judgements about the policy.
+- Do not extract names, policy numbers, NRIC/passport numbers, phone numbers, addresses, adviser names, dates of birth, or other personal identifiers.
+- Prefer policy/product facts from the Cover Page, Product Summary, Policy Illustration, Plan Summary, table of values, and charges/distribution-cost sections.
 
 Return a JSON object with a single "facts" array. Each fact must match this shape:
 {
@@ -23,21 +25,32 @@ Return a JSON object with a single "facts" array. Each fact must match this shap
 }
 
 Extract these facts if present:
+- Product / plan name
+- Participating / non-participating / investment-linked / term / whole life / endowment classification
+- Plan and rider rows from the plan summary
 - Annual premium (and frequency)
+- Premium frequency
 - Premium payment term
 - Policy term
+- Coverage amount / sum assured for each main plan or rider
 - Sum assured / death benefit
-- Distribution cost (year 1, and the Total Distribution Cost over the policy if stated — the Total Distribution Cost is the LIA-disclosed figure and should be captured whenever present)
+- Total Distribution Cost over the policy if stated — this is the LIA-disclosed figure and should be captured whenever present
+- Distribution cost by year if the table provides yearly values
 - Guaranteed surrender values by year (5, 10, 15, 20 if available)
 - Projected (non-guaranteed) surrender values
+- Cash value / maturity value / protection value tables
 - Guaranteed vs non-guaranteed breakdown notice
+- Illustrated investment rate of return, if stated
+- Charges or fees, including policy fees, management fees, insurance charges, surrender charges, or fund charges
 - Any key exclusions or waiting periods
-- Policy type (whole life, term, ILP, endowment, etc.)`;
+- Important cover-page warnings or product-risk statements`;
 
 export async function extractFactsFromPDF(pdfBuffer: Buffer): Promise<PolicyFact[]> {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const pdfParse = require("pdf-parse") as (buf: Buffer) => Promise<{ text: string }>;
-  const parsed = await pdfParse(pdfBuffer);
+  const { PDFParse } = require("pdf-parse") as typeof import("pdf-parse");
+  const parser = new PDFParse({ data: pdfBuffer });
+  const parsed = await parser.getText();
+  await parser.destroy();
   const text = parsed.text.slice(0, 12000); // stay within token budget
 
   const response = await openai.chat.completions.create({
