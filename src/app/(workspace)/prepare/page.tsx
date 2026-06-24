@@ -8,6 +8,7 @@ import type {
   UserStatement,
 } from "@/types";
 import Link from "next/link";
+import { buildMeetingReadiness } from "@/lib/advice-workflows";
 import {
   createCaseEvent,
   loadCheckWorkspace,
@@ -42,6 +43,11 @@ export default function PreparePage() {
   );
   const [savedCalculations] = useState<CalculationCard[] | null>(
     () => checkWorkspace?.calculations ?? null
+  );
+  const readiness = buildMeetingReadiness(
+    facts,
+    savedComparisons ?? [],
+    savedCalculations ?? []
   );
 
   async function generateReport() {
@@ -119,6 +125,7 @@ export default function PreparePage() {
           <nav className="cp-nav-links">
             <Link href="/check">Check</Link>
             <Link href="/decode">Decode</Link>
+            <Link href="/needs">Needs</Link>
             <Link href="/my-case">My Case</Link>
           </nav>
         </header>
@@ -130,8 +137,9 @@ export default function PreparePage() {
               <h1 className="cp-route-title">Prepare for the adviser meeting.</h1>
             </div>
             <p className="cp-route-copy">
-            Your meeting-prep report — sourced facts, calculations, and questions
-            for your licensed adviser.
+            Turn your document and checked claims into a readiness pack:
+            what to bring, what to clarify in the meeting, and what to save
+            afterwards.
           </p>
             <div className="cp-empty">
               {facts.length} policy facts. {statements.length} checked claim(s).
@@ -139,9 +147,28 @@ export default function PreparePage() {
           </section>
 
           <section className="cp-stack">
+            <section className="cp-panel cp-panel-pad space-y-5">
+              <div>
+                <p className="cp-source-label">Meeting readiness</p>
+                <h2 className="text-2xl font-medium tracking-[-0.01em]">
+                  Before, during, and after the FA conversation
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                  This is the Zocks/Jump-style workflow layer: Claro turns
+                  documents and claims into an action pack without crossing into
+                  buy, keep, cancel, switch, or recommendation advice.
+                </p>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-3">
+                <ReadinessColumn title="Before" items={readiness.before} />
+                <ReadinessColumn title="During" items={readiness.during} />
+                <ReadinessColumn title="After" items={readiness.after} />
+              </div>
+            </section>
 
         {!report && (facts.length === 0 || statements.length === 0) && (
-              <div className="cp-panel cp-panel-pad">
+              <div className="cp-panel cp-panel-pad space-y-4">
                 <p className="text-sm font-medium">
               Prepare needs a document and at least one checked adviser claim.
             </p>
@@ -149,6 +176,20 @@ export default function PreparePage() {
               This page should not invent a sample meeting pack before you have
               added your own material.
             </p>
+                <ol className="space-y-2 text-sm leading-6 text-[var(--muted)]">
+                  <li>
+                    <span className="text-[var(--foreground)]">1.</span>{" "}
+                    Use Decode to load the policy illustration or financial document.
+                  </li>
+                  <li>
+                    <span className="text-[var(--foreground)]">2.</span>{" "}
+                    Use Check to split and verify what the adviser said.
+                  </li>
+                  <li>
+                    <span className="text-[var(--foreground)]">3.</span>{" "}
+                    Return here to generate the meeting-prep report.
+                  </li>
+                </ol>
                 <div className="mt-4 flex flex-wrap gap-3">
               <Link
                 href="/decode"
@@ -263,5 +304,28 @@ export default function PreparePage() {
         </div>
       </div>
     </main>
+  );
+}
+
+function ReadinessColumn({
+  title,
+  items,
+}: {
+  title: string;
+  items: Array<{ title: string; detail: string; action: string }>;
+}) {
+  return (
+    <div className="cp-readiness-column">
+      <p className="cp-source-label">{title}</p>
+      <div className="space-y-3">
+        {items.map((item) => (
+          <article key={`${title}-${item.title}`} className="space-y-2">
+            <h3 className="text-sm font-medium">{item.title}</h3>
+            <p className="text-xs leading-5 text-[var(--muted)]">{item.detail}</p>
+            <p className="text-xs leading-5">{item.action}</p>
+          </article>
+        ))}
+      </div>
+    </div>
   );
 }

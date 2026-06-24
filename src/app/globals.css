@@ -284,6 +284,26 @@ body {
   justify-content: space-between;
 }
 
+.cp-scenario-card {
+  border: 1px solid var(--line);
+  background: color-mix(in oklch, var(--surface) 88%, var(--surface-muted));
+  padding: 1rem;
+  display: grid;
+  gap: 0.875rem;
+}
+
+.cp-readiness-column {
+  min-height: 18rem;
+  border: 1px solid var(--line);
+  background: var(--surface-muted);
+  padding: 1rem;
+}
+
+.cp-snapshot-item {
+  border-top: 1px solid var(--line);
+  padding-top: 0.875rem;
+}
+
 .cp-alert {
   border: 1px solid color-mix(in oklch, var(--warning) 35%, var(--line));
   background: color-mix(in oklch, var(--warning) 7%, var(--surface));

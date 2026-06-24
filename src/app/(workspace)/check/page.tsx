@@ -211,6 +211,7 @@ export default function CheckPage() {
           <nav className="cp-nav-links">
             <Link href="/decode">Decode</Link>
             <Link href="/ask">Ask</Link>
+            <Link href="/needs">Needs</Link>
             <Link href="/my-case">My Case</Link>
           </nav>
         </header>

@@ -3,10 +3,12 @@
 import { useRef, useState } from "react";
 import type { PolicyFact } from "@/types";
 import Link from "next/link";
+import { buildScenarioStressTests } from "@/lib/advice-workflows";
 import { buildDocumentAnalysis } from "@/lib/document-analysis";
 import {
   clearPolicyWorkspace,
   createCaseEvent,
+  loadCaseWorkspace,
   savePolicyWorkspace,
   updateCaseWorkspace,
   type PolicyWorkspaceSource,
@@ -23,8 +25,12 @@ export default function DecodePage() {
   const [loadingStep, setLoadingStep] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [usedFallback, setUsedFallback] = useState(false);
+  const [caseWorkspace] = useState(() => loadCaseWorkspace());
   const fileRef = useRef<HTMLInputElement>(null);
   const analysis = facts ? buildDocumentAnalysis(facts) : null;
+  const stressTests = facts
+    ? buildScenarioStressTests(facts, caseWorkspace?.context)
+    : [];
 
   async function loadSeeded() {
     await extractFacts("seeded");
@@ -121,6 +127,7 @@ export default function DecodePage() {
           <nav className="cp-nav-links">
             <Link href="/check">Check</Link>
             <Link href="/ask">Ask</Link>
+            <Link href="/needs">Needs</Link>
             <Link href="/my-case">My Case</Link>
           </nav>
         </header>
@@ -283,6 +290,43 @@ export default function DecodePage() {
                       ))}
                     </section>
 
+                    <section className="cp-panel cp-panel-pad space-y-5">
+                      <div>
+                        <p className="cp-source-label">Scenario stress test</p>
+                        <h3 className="text-lg font-medium">
+                          What changes if real life does not follow the sales pitch?
+                        </h3>
+                        <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                          Inspired by AI finance products that surface hidden cost
+                          and scenario risk, Claro turns document facts into
+                          neutral stress checks. It does not tell you what to do.
+                        </p>
+                      </div>
+
+                      <div className="space-y-3">
+                        {stressTests.map((test) => (
+                          <article key={test.title} className="cp-scenario-card">
+                            <div>
+                              <p className="cp-source-label">{test.title}</p>
+                              <p className="text-xl font-medium">{test.verdict}</p>
+                            </div>
+                            <p className="text-sm leading-6 text-[var(--muted)]">
+                              {test.detail}
+                            </p>
+                            {test.evidence.length > 0 && (
+                              <div className="flex flex-wrap gap-2">
+                                {test.evidence.map((fact) => (
+                                  <span key={`${test.title}-${fact.id}`} className="cp-status">
+                                    {fact.label}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </article>
+                        ))}
+                      </div>
+                    </section>
+
                     <section className="space-y-3">
                       <div>
                         <p className="cp-source-label">Interpretation</p>
@@ -369,6 +413,9 @@ export default function DecodePage() {
                     className="primary-button"
                   >
                     Check statements →
+                  </Link>
+                  <Link href="/prepare" className="secondary-button">
+                    Prepare meeting pack
                   </Link>
                   <button
                     onClick={() => {

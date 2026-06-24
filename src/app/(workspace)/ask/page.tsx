@@ -97,6 +97,7 @@ export default function AskPage() {
           <nav className="cp-nav-links">
             <Link href="/check">Check</Link>
             <Link href="/decode">Decode</Link>
+            <Link href="/needs">Needs</Link>
             <Link href="/my-case">My Case</Link>
           </nav>
         </header>

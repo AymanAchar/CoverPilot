@@ -8,13 +8,24 @@ const ACTIONS = [
   },
   {
     title: "Understand a financial document",
-    detail: "For a policy illustration or financial PDF.",
+    detail: "For document breakdowns, cost checks, and scenario stress tests.",
     href: "/decode",
   },
   {
     title: "Ask a financial question",
-    detail: "For a general concept before speaking to an adviser.",
+    detail: "For concepts, public guidance, and next questions.",
     href: "/ask",
+  },
+];
+
+const SUPPORTING_ACTIONS = [
+  {
+    label: "Map my situation",
+    href: "/needs",
+  },
+  {
+    label: "Prepare meeting pack",
+    href: "/prepare",
   },
 ];
 
@@ -65,12 +76,19 @@ export default function Home() {
                   </span>
                 </Link>
               ))}
+              <div className="flex flex-wrap gap-2 pt-2">
+                {SUPPORTING_ACTIONS.map((action) => (
+                  <Link key={action.href} href={action.href} className="cp-chip">
+                    {action.label}
+                  </Link>
+                ))}
+              </div>
             </div>
           </div>
 
           <p className="mt-6 max-w-xl text-sm leading-6 text-[var(--muted)]">
-            Claro helps you read, check, and prepare questions. It does
-            not tell you what to buy, keep, cancel, or switch.
+            Claro helps you read, check, stress-test, and prepare questions.
+            It does not tell you what to buy, keep, cancel, or switch.
           </p>
         </section>
       </div>
