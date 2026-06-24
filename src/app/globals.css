@@ -1,8 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fdfcfc;
-  --foreground: #000000;
+  --background: #fbfaf7;
+  --foreground: #11100e;
+  --surface: #ffffff;
+  --surface-muted: #f1eee8;
+  --line: #dcd7cf;
+  --muted: #756f66;
+  --soft: #aaa298;
+  --accent: #2459d6;
+  --accent-2: #0f8f7a;
 }
 
 @theme inline {
@@ -26,9 +33,9 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #000000;
-  background: #000000;
-  color: #fdfcfc;
+  border: 1px solid var(--foreground);
+  background: var(--foreground);
+  color: var(--background);
   padding: 0.75rem 1.25rem;
   font-size: 0.875rem;
   font-weight: 500;
@@ -48,9 +55,9 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #e5e5e5;
-  background: #ffffff;
-  color: #000000;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--foreground);
   padding: 0.75rem 1.25rem;
   font-size: 0.875rem;
   font-weight: 500;
@@ -59,7 +66,120 @@ body {
 }
 
 .secondary-button:hover {
-  background: #f5f3f1;
+  background: var(--surface-muted);
+}
+
+.cg-shell {
+  width: min(100% - 2.5rem, 1240px);
+  margin: 0 auto;
+}
+
+.cg-hairline {
+  border-color: var(--line);
+}
+
+.cg-card {
+  border: 1px solid var(--line);
+  background: color-mix(in oklch, var(--surface) 94%, var(--background));
+}
+
+.cg-card-muted {
+  border: 1px solid var(--line);
+  background: var(--surface-muted);
+}
+
+.cg-kicker {
+  font-size: 0.75rem;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.cg-process-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.cg-process-card {
+  min-height: 12.5rem;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition:
+    transform 180ms ease,
+    background-color 180ms ease,
+    border-color 180ms ease;
+}
+
+.cg-process-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--foreground);
+  background: #fffefb;
+}
+
+.cg-process-index {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--soft);
+}
+
+.cg-editorial-rows {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(2rem, 5vw, 4.5rem);
+}
+
+.cg-editorial-row {
+  display: grid;
+  grid-template-columns: 0.7fr 1.4fr 0.9fr;
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.cg-editorial-row:nth-child(even) {
+  grid-template-columns: 1.25fr 0.8fr 1.05fr;
+}
+
+.cg-empty-column {
+  min-height: 6rem;
+  border-top: 1px solid var(--line);
+}
+
+.cg-focus-panel {
+  border: 1px solid var(--foreground);
+  background: var(--foreground);
+  color: var(--background);
+}
+
+.cg-source-link {
+  color: var(--foreground);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+@media (max-width: 900px) {
+  .cg-shell {
+    width: min(100% - 1.5rem, 1240px);
+  }
+
+  .cg-process-grid,
+  .cg-editorial-row,
+  .cg-editorial-row:nth-child(even) {
+    grid-template-columns: 1fr;
+  }
+
+  .cg-process-card {
+    min-height: 9.5rem;
+  }
+
+  .cg-empty-column {
+    display: none;
+  }
 }
 
 .secondary-button:active {

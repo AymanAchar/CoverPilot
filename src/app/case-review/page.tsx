@@ -8,6 +8,7 @@ import { checkCompliance } from "@/lib/compliance";
 import {
   createCaseEvent,
   createEmptyCaseWorkspace,
+  DEFAULT_USER_CONTEXT,
   loadCaseWorkspace,
   saveCaseWorkspace,
   saveCheckWorkspace,
@@ -75,6 +76,19 @@ const ASK_TOPICS: Array<{
     topic: "early-surrender",
   },
 ];
+
+const INITIAL_WORKSPACE: CaseWorkspace = {
+  id: "CP-SG-DEMO",
+  context: DEFAULT_USER_CONTEXT,
+  facts: [],
+  factsSource: "sample",
+  statements: [],
+  comparisons: [],
+  calculations: [],
+  report: null,
+  events: [],
+  updatedAt: "",
+};
 
 function buildAskAnswer(question: string, sources: OfficialSource[]) {
   const lead =
@@ -206,7 +220,7 @@ function formatMeetingPack(workspace: CaseWorkspace): string {
 }
 
 export default function CaseReviewPage() {
-  const [workspace, setWorkspace] = useState<CaseWorkspace | null>(null);
+  const [workspace, setWorkspace] = useState<CaseWorkspace>(INITIAL_WORKSPACE);
   const [activeStep, setActiveStep] = useState(0);
   const [claimInput, setClaimInput] = useState("");
   const [firewallInput, setFirewallInput] = useState("Should I buy this policy?");
@@ -232,7 +246,6 @@ export default function CaseReviewPage() {
   }
 
   function updateWorkspace(updater: (current: CaseWorkspace) => CaseWorkspace) {
-    if (!workspace) return;
     persist(updater(loadCaseWorkspace() ?? workspace));
   }
 
@@ -339,7 +352,6 @@ export default function CaseReviewPage() {
   }
 
   async function startSeededDemo() {
-    if (!workspace) return;
     setError(null);
     setLoading("Starting seeded demo");
     try {
@@ -496,7 +508,6 @@ export default function CaseReviewPage() {
   }
 
   async function runEvidenceReview() {
-    if (!workspace) return;
     if (workspace.facts.length === 0) {
       setError("Load a policy first so CoverPilot has evidence to check.");
       return;
@@ -545,7 +556,6 @@ export default function CaseReviewPage() {
     nextComparisons?: SourceComparison[],
     nextCalculations?: CalculationCard[]
   ) {
-    if (!workspace) return;
     const comparisons = nextComparisons ?? workspace.comparisons;
     const calculations = nextCalculations ?? workspace.calculations;
     if (comparisons.length === 0 || calculations.length === 0) {
@@ -582,7 +592,6 @@ export default function CaseReviewPage() {
   }
 
   async function generateMeetingPack() {
-    if (!workspace) return;
     if (workspace.comparisons.length === 0) {
       await runEvidenceReview();
       return;
@@ -602,25 +611,15 @@ export default function CaseReviewPage() {
     window.setTimeout(() => setCopiedReport(false), 1800);
   }
 
-  if (!workspace) {
-    return (
-      <main className="min-h-screen bg-[#fdfcfc] text-black">
-        <div className="mx-auto max-w-[1240px] px-5 py-10 lg:px-8">
-          <p className="text-sm text-[#777169]">Loading case workspace...</p>
-        </div>
-      </main>
-    );
-  }
-
   return (
-    <main className="min-h-screen bg-[#fdfcfc] text-black">
-      <header className="border-b border-[#e5e5e5]">
-        <div className="mx-auto flex h-12 max-w-[1240px] items-center justify-between px-5 lg:px-8">
+    <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
+      <header className="border-b cg-hairline">
+        <div className="cg-shell flex h-12 items-center justify-between">
           <Link href="/" className="font-display text-xl font-light">
             CoverPilot
           </Link>
-          <div className="flex items-center gap-4 text-sm text-[#777169]">
-            <Link href="/my-case" className="hover:text-black">
+          <div className="flex items-center gap-4 text-sm text-[var(--muted)]">
+            <Link href="/my-case" className="hover:text-[var(--foreground)]">
               My Case
             </Link>
             <span className="hidden sm:inline">No recommendations</span>
@@ -628,10 +627,10 @@ export default function CaseReviewPage() {
         </div>
       </header>
 
-      <section className="mx-auto grid max-w-[1240px] gap-8 px-5 py-8 lg:grid-cols-[232px_1fr] lg:px-8">
-        <aside className="space-y-5">
+      <section className="cg-shell grid gap-8 py-8 lg:grid-cols-[220px_1fr]">
+        <aside className="space-y-5 lg:sticky lg:top-6 lg:self-start">
           <div>
-            <p className="text-sm text-[#777169]">Case ID</p>
+            <p className="cg-kicker">Case ID</p>
             <h1 className="font-display mt-1 text-3xl font-light">
               {workspace.id}
             </h1>
@@ -643,8 +642,8 @@ export default function CaseReviewPage() {
                 onClick={() => setActiveStep(index)}
                 className={`flex w-full items-center justify-between border px-4 py-3 text-left text-sm transition ${
                   activeStep === index
-                    ? "border-black bg-black text-[#fdfcfc]"
-                    : "border-[#e5e5e5] bg-white text-black hover:bg-[#f5f3f1]"
+                    ? "border-[var(--foreground)] bg-[var(--foreground)] text-[var(--background)]"
+                    : "border-[var(--line)] bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-muted)]"
                 }`}
               >
                 <span>{title}</span>
@@ -654,25 +653,25 @@ export default function CaseReviewPage() {
               </button>
             ))}
           </nav>
-          <div className="border border-[#e5e5e5] bg-white p-4 text-sm leading-6 text-[#777169]">
+          <div className="cg-card-muted p-4 text-sm leading-6 text-[var(--muted)]">
             This workspace produces facts, calculations, and questions. It does
             not tell you what to buy, keep, cancel, or switch.
           </div>
         </aside>
 
         <div className="space-y-8">
-          <section className="border-b border-[#e5e5e5] pb-6">
-            <p className="text-sm text-[#777169]">
-              Singapore insurance evidence workflow
-            </p>
-            <h2 className="font-display mt-3 max-w-[720px] text-4xl font-light leading-tight">
-              One sourced case before the next FA conversation.
+          <section className="pb-2">
+            <p className="cg-kicker">Singapore insurance evidence workflow</p>
+            <h2 className="font-display mt-3 max-w-[720px] text-[42px] font-light leading-[1.04] md:text-[56px]">
+              One sourced case before the FA conversation.
             </h2>
-            <p className="mt-3 max-w-[680px] text-sm leading-6 text-[#777169]">
+            <p className="mt-4 max-w-[680px] text-sm leading-6 text-[var(--muted)]">
               Ask from public sources, decode the PI, verify claims against the
               extracted facts, then prepare questions for a licensed adviser.
             </p>
           </section>
+
+          <EvidenceProcessStrip workspace={workspace} activeStep={activeStep} />
 
           {error && (
             <div className="border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -681,7 +680,7 @@ export default function CaseReviewPage() {
           )}
 
           {loading && (
-            <div className="border border-[#e5e5e5] bg-white px-4 py-3 text-sm text-[#777169]">
+            <div className="cg-card px-4 py-3 text-sm text-[var(--muted)]">
               {loading}...
             </div>
           )}
@@ -781,7 +780,7 @@ function IntakeStep({
 
   return (
     <section className="space-y-7">
-      <div className="border border-[#e5e5e5] bg-white p-5">
+      <div className="cg-card p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <SectionHeader
             eyebrow="Ask"
@@ -801,8 +800,8 @@ function IntakeStep({
               }}
               className={`shrink-0 border px-3 py-2 text-sm transition ${
                 selectedTopic === topic.topic
-                  ? "border-black bg-black text-[#fdfcfc]"
-                  : "border-[#e5e5e5] bg-white text-black hover:bg-[#f5f3f1]"
+                  ? "border-[var(--foreground)] bg-[var(--foreground)] text-[var(--background)]"
+                  : "border-[var(--line)] bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-muted)]"
               }`}
             >
               {topic.label}
@@ -811,23 +810,23 @@ function IntakeStep({
         </div>
         <div className="mt-5 grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
           <div>
-            <p className="text-sm text-[#777169]">User question</p>
+            <p className="text-sm text-[var(--muted)]">User question</p>
             <textarea
               value={askQuestion}
               onChange={(event) => setAskQuestion(event.target.value)}
-              className="mt-2 min-h-24 w-full resize-none border border-[#e5e5e5] bg-white px-4 py-3 text-base leading-7 outline-none focus:border-black"
+              className="mt-2 min-h-24 w-full resize-none border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-base leading-7 outline-none focus:border-[var(--foreground)]"
             />
             <button onClick={answerAskQuestion} className="primary-button mt-3">
               Ask source-backed question
             </button>
-            <p className="mt-3 text-xs leading-5 text-[#777169]">
+            <p className="mt-3 text-xs leading-5 text-[var(--muted)]">
               Preset: {selectedPreset?.label}. Answers stay factual and point
               back to official-source context.
             </p>
           </div>
           <div className="space-y-3">
             {askAnswer && (
-              <div className="border border-black bg-white p-4 text-sm leading-6 whitespace-pre-line">
+              <div className="border border-[var(--foreground)] bg-[var(--surface)] p-4 text-sm leading-6 whitespace-pre-line">
                 {askAnswer}
               </div>
             )}
@@ -836,12 +835,12 @@ function IntakeStep({
                 <SourceReference key={source.id} source={source} />
               ))
             ) : (
-              <div className="border border-[#e5e5e5] bg-[#f5f3f1] px-4 py-3 text-sm leading-6 text-[#777169]">
+              <div className="cg-card-muted px-4 py-3 text-sm leading-6 text-[var(--muted)]">
                 MoneySense and LIA source entries commonly warn
                 users to check surrender values, distribution cost, guaranteed
                 values, and policy conditions before relying on early-exit or
                 flexibility claims.
-                <span className="mt-2 block font-mono text-xs text-[#a59f97]">
+                <span className="mt-2 block font-mono text-xs text-[var(--soft)]">
                   Official-source discussion prompt
                 </span>
               </div>
@@ -892,14 +891,28 @@ function IntakeStep({
       </div>
 
       <div className="space-y-4">
-        <ActionPanel
-          title="Load policy evidence"
-          body="For the demo, start with the seeded case. For real usage, upload a PDF or enter PI facts manually; CoverPilot stores extracted facts only."
-        >
-          <div className="flex flex-wrap gap-3">
-            <button onClick={startSeededDemo} className="primary-button">
+        <div className="cg-focus-panel p-5">
+          <p className="cg-kicker text-[color-mix(in_oklch,var(--background)_70%,transparent)]">
+            Demo route
+          </p>
+          <h3 className="font-display mt-3 text-3xl font-light leading-tight">
+            Generate the full case file.
+          </h3>
+          <p className="mt-3 text-sm leading-6 text-[color-mix(in_oklch,var(--background)_75%,transparent)]">
+            Start with the seeded PI, adviser claims, deterministic checks, and
+            meeting pack in one flow.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <button onClick={startSeededDemo} className="secondary-button">
               Start seeded demo
             </button>
+          </div>
+        </div>
+        <ActionPanel
+          title="Load policy evidence"
+          body="Upload a PDF or enter PI facts manually; CoverPilot stores extracted facts only."
+        >
+          <div className="flex flex-wrap gap-3">
             <button onClick={loadSample} className="secondary-button">
               Use sample policy
             </button>
@@ -911,7 +924,7 @@ function IntakeStep({
             </button>
           </div>
         </ActionPanel>
-        <div className="border border-[#e5e5e5] bg-[#f5f3f1] p-4 text-xs leading-5 text-[#777169]">
+        <div className="cg-card-muted p-4 text-xs leading-5 text-[var(--muted)]">
           Resource discipline: public-source answers cite MoneySense/LIA links;
           policy checks cite extracted PI facts; calculations show formulas and
           input fields.
@@ -919,6 +932,66 @@ function IntakeStep({
       </div>
       </div>
     </section>
+  );
+}
+
+function EvidenceProcessStrip({
+  workspace,
+  activeStep,
+}: {
+  workspace: CaseWorkspace;
+  activeStep: number;
+}) {
+  const process = [
+    {
+      label: "Ask",
+      value: `${OFFICIAL_SOURCES.length} sources`,
+      detail: "MoneySense and LIA context",
+    },
+    {
+      label: "Decode",
+      value: `${workspace.facts.length} facts`,
+      detail: workspace.factsSource === "uploaded" ? "Uploaded or manual PI" : "Seeded PI evidence",
+    },
+    {
+      label: "Verify",
+      value: `${workspace.comparisons.length} checks`,
+      detail: `${workspace.statements.length} adviser claims`,
+    },
+    {
+      label: "Prepare",
+      value: workspace.report
+        ? `${workspace.report.questionsForLicensedAdviser.length} questions`
+        : "Not generated",
+      detail: "Licensed-adviser meeting pack",
+    },
+  ];
+
+  return (
+    <div className="cg-process-grid">
+      {process.map((item, index) => (
+        <div
+          key={item.label}
+          className={`cg-process-card ${
+            activeStep === index ? "border-[var(--foreground)] bg-[#fffefb]" : ""
+          }`}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <span className="cg-process-index">
+              {String(index + 1).padStart(2, "0")}
+            </span>
+            {activeStep === index && <SourceBadge label="Active" />}
+          </div>
+          <div>
+            <p className="text-2xl font-light">{item.label}</p>
+            <p className="mt-3 text-sm text-[var(--foreground)]">{item.value}</p>
+            <p className="mt-1 text-xs leading-5 text-[var(--muted)]">
+              {item.detail}
+            </p>
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -974,14 +1047,14 @@ function FactsStep({
         </div>
       ) : (
         <div className="space-y-5">
-          <div className="border border-[#e5e5e5] bg-white p-4">
+          <div className="cg-card p-4">
             <p className="text-sm font-medium">Quick add common PI fields</p>
             <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
               {MANUAL_FACT_TEMPLATES.slice(0, 7).map((template) => (
                 <button
                   key={template.id}
                   onClick={() => addManualFact(template)}
-                  className="shrink-0 border border-[#e5e5e5] bg-white px-3 py-2 text-xs text-[#777169] transition hover:bg-[#f5f3f1] hover:text-black"
+                  className="shrink-0 border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--muted)] transition hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
                 >
                   {template.label}
                 </button>
@@ -990,7 +1063,7 @@ function FactsStep({
           </div>
           <div className="grid gap-4 md:grid-cols-2">
           {workspace.facts.map((fact) => (
-            <div key={fact.id} className="border border-[#e5e5e5] bg-white p-4">
+            <div key={fact.id} className="cg-card p-4">
               <div className="flex items-start justify-between gap-4">
                 <input
                   value={fact.label}
@@ -1003,7 +1076,7 @@ function FactsStep({
                   <SourceBadge label={sourceLabel(fact.sourceType)} />
                   <button
                     onClick={() => removeFact(fact.id)}
-                    className="text-xs text-[#777169] hover:text-black"
+                    className="text-xs text-[var(--muted)] hover:text-[var(--foreground)]"
                   >
                     Remove
                   </button>
@@ -1021,7 +1094,7 @@ function FactsStep({
                 onChange={(event) =>
                   updateFact(fact.id, "quote", event.target.value)
                 }
-                className="mt-3 min-h-20 w-full resize-none border-t border-[#e5e5e5] bg-transparent pt-3 text-xs leading-5 text-[#777169] outline-none"
+                className="mt-3 min-h-20 w-full resize-none border-t border-[var(--line)] bg-transparent pt-3 text-xs leading-5 text-[var(--muted)] outline-none"
                 placeholder="Supporting quote or manual note"
               />
             </div>
@@ -1077,12 +1150,12 @@ function ClaimStep({
             onChange={(event) => setClaimInput(event.target.value)}
             onKeyDown={(event) => event.key === "Enter" && addClaim()}
             placeholder="Paste an adviser claim, e.g. You can access your money anytime"
-            className="w-full border border-[#e5e5e5] bg-white px-4 py-3 text-sm outline-none focus:border-black"
+            className="w-full border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-sm outline-none focus:border-[var(--foreground)]"
           />
           {claimInput.trim() && (
             <p
               className={`mt-2 text-xs leading-5 ${
-                claimWarning.blocked ? "text-red-700" : "text-[#777169]"
+                claimWarning.blocked ? "text-red-700" : "text-[var(--muted)]"
               }`}
             >
               {claimWarning.blocked
@@ -1113,15 +1186,15 @@ function ClaimStep({
             workspace.statements.map((statement, index) => (
               <div
                 key={statement.id}
-                className="flex gap-3 border border-[#e5e5e5] bg-white p-4"
+                className="flex gap-3 border border-[var(--line)] bg-[var(--surface)] p-4"
               >
-                <span className="font-mono text-xs text-[#a59f97]">
+                <span className="font-mono text-xs text-[var(--soft)]">
                   {String(index + 1).padStart(2, "0")}
                 </span>
                 <p className="flex-1 text-sm leading-6">{statement.text}</p>
                 <button
                   onClick={() => removeClaim(statement.id)}
-                  className="text-xs text-[#777169] hover:text-black"
+                  className="text-xs text-[var(--muted)] hover:text-[var(--foreground)]"
                 >
                   Remove
                 </button>
@@ -1246,14 +1319,14 @@ function MeetingPackStep({
             <input
               value={firewallInput}
               onChange={(event) => setFirewallInput(event.target.value)}
-              className="w-full border border-[#e5e5e5] bg-white px-4 py-3 text-sm outline-none focus:border-black"
+              className="w-full border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-sm outline-none focus:border-[var(--foreground)]"
             />
             <button onClick={testFirewall} className="secondary-button">
               Test firewall
             </button>
           </div>
         </ActionPanel>
-        <div className="border border-[#e5e5e5] bg-white p-5">
+        <div className="cg-card p-5">
           <SourceBadge label={firewallResult.blocked ? "Blocked" : "Allowed"} />
           <p className="mt-4 text-base leading-7">
             {firewallResult.blocked
@@ -1261,7 +1334,7 @@ function MeetingPackStep({
               : "This prompt can proceed as factual information or preparation."}
           </p>
           {firewallResult.blocked && (
-            <p className="mt-3 text-sm leading-6 text-[#777169]">
+            <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
               {firewallResult.redirect}
             </p>
           )}
@@ -1286,14 +1359,14 @@ function MeetingReport({
 }) {
   return (
     <div id="meeting-pack" className="space-y-6">
-      <div className="border border-[#e5e5e5] bg-white p-5">
+      <div className="cg-card p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <p className="font-mono text-xs text-[#a59f97]">{workspace.id}</p>
+            <p className="font-mono text-xs text-[var(--soft)]">{workspace.id}</p>
             <h3 className="font-display mt-2 text-3xl font-light">
               Insurance meeting-prep pack
             </h3>
-            <p className="mt-3 max-w-[680px] text-sm leading-6 text-[#777169]">
+            <p className="mt-3 max-w-[680px] text-sm leading-6 text-[var(--muted)]">
               This pack summarizes source evidence and questions for a licensed
               adviser. It does not recommend what to buy, keep, cancel, switch,
               or rank.
@@ -1312,11 +1385,11 @@ function MeetingReport({
       <div className="space-y-4">
         <h3 className="text-sm font-medium">Calculation evidence</h3>
         {report.calculations.map((calculation) => (
-          <div key={calculation.id} className="border border-[#e5e5e5] bg-white p-4">
+          <div key={calculation.id} className="cg-card p-4">
             <SourceBadge label="Calculated" />
-            <p className="mt-3 text-sm text-[#777169]">{calculation.title}</p>
+            <p className="mt-3 text-sm text-[var(--muted)]">{calculation.title}</p>
             <p className="mt-1 text-2xl font-light">{calculation.result}</p>
-            <p className="mt-2 font-mono text-xs leading-5 text-[#a59f97]">
+            <p className="mt-2 font-mono text-xs leading-5 text-[var(--soft)]">
               {calculation.formula}
             </p>
           </div>
@@ -1325,20 +1398,20 @@ function MeetingReport({
       <div className="space-y-4">
         <h3 className="text-sm font-medium">Questions for licensed adviser</h3>
         {report.questionsForLicensedAdviser.map((question, index) => (
-          <div key={`${question}-${index}`} className="flex gap-4 border-t border-[#e5e5e5] pt-4">
-            <span className="font-mono text-sm text-[#a59f97]">
+          <div key={`${question}-${index}`} className="flex gap-4 border-t border-[var(--line)] pt-4">
+            <span className="font-mono text-sm text-[var(--soft)]">
               {String(index + 1).padStart(2, "0")}
             </span>
             <p className="text-base leading-7">{question}</p>
           </div>
         ))}
-        <div className="border border-[#e5e5e5] bg-[#f5f3f1] p-4 text-xs leading-5 text-[#777169]">
+        <div className="cg-card-muted p-4 text-xs leading-5 text-[var(--muted)]">
           {report.complianceNotice}
         </div>
       </div>
       </div>
 
-      <div className="border border-[#e5e5e5] bg-white p-5">
+      <div className="cg-card p-5">
         <h3 className="text-sm font-medium">Official-source context</h3>
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           {OFFICIAL_SOURCES.slice(0, 4).map((source) => (
@@ -1352,8 +1425,8 @@ function MeetingReport({
 
 function SummaryMetric({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className="border-t border-[#e5e5e5] pt-3">
-      <p className="text-xs text-[#a59f97]">{label}</p>
+    <div className="border-t border-[var(--line)] pt-3">
+      <p className="text-xs text-[var(--soft)]">{label}</p>
       <p className="mt-1 text-2xl font-light">{value}</p>
     </div>
   );
@@ -1367,12 +1440,12 @@ function ComparisonCard({
   statement: string;
 }) {
   return (
-    <div className="border border-[#e5e5e5] bg-white p-4">
+    <div className="cg-card p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <p className="text-base leading-7">&ldquo;{statement}&rdquo;</p>
         <SourceBadge label={STATE_LABELS[comparison.state]} />
       </div>
-      <p className="mt-4 text-sm leading-6 text-[#777169]">
+      <p className="mt-4 text-sm leading-6 text-[var(--muted)]">
         {comparison.explanation}
       </p>
       {comparison.documentEvidence.length > 0 && (
@@ -1380,12 +1453,12 @@ function ComparisonCard({
           {comparison.documentEvidence.map((fact) => (
             <div
               key={fact.id}
-              className="border border-[#e5e5e5] bg-[#f5f3f1] px-4 py-3 text-xs leading-5 text-[#777169]"
+              className="cg-card-muted px-4 py-3 text-xs leading-5 text-[var(--muted)]"
             >
-              <span className="font-medium text-black">{fact.label}: </span>
+              <span className="font-medium text-[var(--foreground)]">{fact.label}: </span>
               {fact.quote ?? String(fact.value)}
               {fact.page && (
-                <span className="mt-2 block font-mono text-[11px] text-[#a59f97]">
+                <span className="mt-2 block font-mono text-[11px] text-[var(--soft)]">
                   PI page {fact.page}
                 </span>
               )}
@@ -1394,7 +1467,7 @@ function ComparisonCard({
                   href={fact.sourceUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="mt-2 block font-mono text-[11px] text-black underline underline-offset-4"
+                  className="cg-source-link mt-2 block font-mono text-[11px]"
                 >
                   {fact.sourceName ?? "Source"}
                 </a>
@@ -1403,7 +1476,7 @@ function ComparisonCard({
           ))}
         </div>
       )}
-      <p className="mt-4 border-t border-[#e5e5e5] pt-3 text-sm leading-6">
+      <p className="mt-4 border-t border-[var(--line)] pt-3 text-sm leading-6">
         Ask: {comparison.clarificationQuestion}
       </p>
     </div>
@@ -1416,11 +1489,11 @@ function CalculationGrid({ calculations }: { calculations: CalculationCard[] }) 
       <h3 className="text-sm font-medium">PI-backed calculations</h3>
       <div className="grid gap-4 md:grid-cols-2">
         {calculations.map((calculation) => (
-          <div key={calculation.id} className="border border-[#e5e5e5] bg-white p-4">
+          <div key={calculation.id} className="cg-card p-4">
             <SourceBadge label="Calculated" />
-            <p className="mt-3 text-sm text-[#777169]">{calculation.title}</p>
+            <p className="mt-3 text-sm text-[var(--muted)]">{calculation.title}</p>
             <p className="mt-1 text-xl font-light">{calculation.result}</p>
-            <p className="mt-3 border-t border-[#e5e5e5] pt-3 font-mono text-[11px] leading-5 text-[#777169]">
+            <p className="mt-3 border-t border-[var(--line)] pt-3 font-mono text-[11px] leading-5 text-[var(--muted)]">
               {calculation.formula}
             </p>
             {calculation.inputs.length > 0 && (
@@ -1428,7 +1501,7 @@ function CalculationGrid({ calculations }: { calculations: CalculationCard[] }) 
                 {calculation.inputs.map((input) => (
                   <span
                     key={input.id}
-                    className="border border-[#e5e5e5] bg-[#f5f3f1] px-2 py-1 text-[11px] text-[#777169]"
+                    className="border border-[var(--line)] bg-[var(--surface-muted)] px-2 py-1 text-[11px] text-[var(--muted)]"
                   >
                     {input.label}: {String(input.value)}
                     {input.unit ? ` ${input.unit}` : ""}
@@ -1436,7 +1509,7 @@ function CalculationGrid({ calculations }: { calculations: CalculationCard[] }) 
                 ))}
               </div>
             )}
-            <p className="mt-2 text-xs leading-5 text-[#777169]">
+            <p className="mt-2 text-xs leading-5 text-[var(--muted)]">
               {calculation.caveat}
             </p>
           </div>
@@ -1454,14 +1527,14 @@ function SourceReference({
   compact?: boolean;
 }) {
   return (
-    <div className="border border-[#e5e5e5] bg-[#f5f3f1] px-4 py-3 text-sm leading-6 text-[#777169]">
+    <div className="cg-card-muted px-4 py-3 text-sm leading-6 text-[var(--muted)]">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="font-medium text-black">{source.body}</span>
+        <span className="font-medium text-[var(--foreground)]">{source.body}</span>
         <a
           href={source.url}
           target="_blank"
           rel="noreferrer"
-          className="font-mono text-[11px] text-black underline underline-offset-4"
+          className="cg-source-link font-mono text-[11px]"
         >
           Source
         </a>
@@ -1469,7 +1542,7 @@ function SourceReference({
       <p className={compact ? "mt-2 text-xs leading-5" : "mt-2"}>
         {source.quote}
       </p>
-      <span className="mt-2 block font-mono text-[11px] text-[#a59f97]">
+      <span className="mt-2 block font-mono text-[11px] text-[var(--soft)]">
         Verified {source.verifiedOn}
       </span>
     </div>
@@ -1487,11 +1560,11 @@ function SectionHeader({
 }) {
   return (
     <div>
-      <p className="text-sm text-[#777169]">{eyebrow}</p>
+      <p className="cg-kicker">{eyebrow}</p>
       <h2 className="font-display mt-2 max-w-[720px] text-4xl font-light leading-tight">
         {title}
       </h2>
-      <p className="mt-3 max-w-[680px] text-sm leading-6 text-[#777169]">
+      <p className="mt-3 max-w-[680px] text-sm leading-6 text-[var(--muted)]">
         {body}
       </p>
     </div>
@@ -1509,11 +1582,11 @@ function TextField({
 }) {
   return (
     <label className="block">
-      <span className="text-xs text-[#777169]">{label}</span>
+      <span className="text-xs text-[var(--muted)]">{label}</span>
       <input
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="mt-2 w-full border border-[#e5e5e5] bg-white px-4 py-3 text-sm outline-none focus:border-black"
+        className="mt-2 w-full border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-sm outline-none focus:border-[var(--foreground)]"
       />
     </label>
   );
@@ -1530,11 +1603,11 @@ function TextArea({
 }) {
   return (
     <label className="block">
-      <span className="text-xs text-[#777169]">{label}</span>
+      <span className="text-xs text-[var(--muted)]">{label}</span>
       <textarea
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="mt-2 min-h-28 w-full resize-none border border-[#e5e5e5] bg-white px-4 py-3 text-sm leading-6 outline-none focus:border-black"
+        className="mt-2 min-h-28 w-full resize-none border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-sm leading-6 outline-none focus:border-[var(--foreground)]"
       />
     </label>
   );
@@ -1550,9 +1623,9 @@ function ActionPanel({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="border border-[#e5e5e5] bg-white p-5">
+    <div className="cg-card p-5">
       <h3 className="text-lg font-medium">{title}</h3>
-      <p className="mt-2 text-sm leading-6 text-[#777169]">{body}</p>
+      <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{body}</p>
       {children && <div className="mt-5">{children}</div>}
     </div>
   );
@@ -1560,16 +1633,16 @@ function ActionPanel({
 
 function EmptyState({ title, body }: { title: string; body: string }) {
   return (
-    <div className="border border-dashed border-[#d8d4d0] bg-[#f5f3f1] p-6">
+    <div className="border border-dashed border-[var(--line)] bg-[var(--surface-muted)] p-6">
       <h3 className="text-base font-medium">{title}</h3>
-      <p className="mt-2 text-sm leading-6 text-[#777169]">{body}</p>
+      <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{body}</p>
     </div>
   );
 }
 
 function SourceBadge({ label }: { label: string }) {
   return (
-    <span className="inline-flex w-fit items-center border border-[#e5e5e5] bg-[#f5f3f1] px-2.5 py-1 text-xs text-[#777169]">
+    <span className="inline-flex w-fit items-center border border-[var(--line)] bg-[var(--surface-muted)] px-2.5 py-1 text-xs text-[var(--muted)]">
       {label}
     </span>
   );
