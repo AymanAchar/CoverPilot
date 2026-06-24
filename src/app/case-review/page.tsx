@@ -76,6 +76,22 @@ const ASK_TOPICS: Array<{
   },
 ];
 
+function buildAskAnswer(question: string, sources: OfficialSource[]) {
+  const lead =
+    sources.length > 0
+      ? sources
+          .slice(0, 2)
+          .map((source) => source.quote)
+          .join(" ")
+      : "Official consumer education sources usually ask consumers to verify policy costs, guaranteed values, surrender values, exclusions, and assumptions before relying on a sales claim.";
+
+  return [
+    `Question: ${question}`,
+    `CoverPilot answer: ${lead}`,
+    "Use this as meeting preparation only: ask the licensed adviser to point to the exact policy illustration page or official source that supports the claim.",
+  ].join("\n\n");
+}
+
 const MANUAL_FACT_TEMPLATES: Array<{
   id: string;
   label: string;
@@ -196,6 +212,7 @@ export default function CaseReviewPage() {
   const [firewallResult, setFirewallResult] = useState(() =>
     checkCompliance("Should I buy this policy?")
   );
+  const claimWarning = checkCompliance(claimInput);
   const [copiedReport, setCopiedReport] = useState(false);
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -215,7 +232,7 @@ export default function CaseReviewPage() {
 
   function updateWorkspace(updater: (current: CaseWorkspace) => CaseWorkspace) {
     if (!workspace) return;
-    persist(updater(workspace));
+    persist(updater(loadCaseWorkspace() ?? workspace));
   }
 
   function updateContext(key: keyof CaseWorkspace["context"], value: string) {
@@ -225,33 +242,46 @@ export default function CaseReviewPage() {
     }));
   }
 
+  async function extractSeededPolicy() {
+    const res = await fetch("/api/policy/extract", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: "seeded" }),
+    });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => null)) as { error?: string } | null;
+      throw new Error(body?.error ?? "Could not load the sample policy.");
+    }
+    const data = (await res.json()) as ExtractResponse & { fallback?: boolean };
+    const source: PolicyWorkspaceSource = data.fallback ? "sample-fallback" : "sample";
+    return { facts: data.facts, source };
+  }
+
   async function loadPolicy(mode: "seeded" | "upload", file?: File) {
     setError(null);
     setLoading(mode === "seeded" ? "Loading sample policy" : "Reading PDF");
     try {
-      let res: Response;
+      let data: ExtractResponse & { fallback?: boolean };
+      let source: PolicyWorkspaceSource;
       if (mode === "seeded") {
-        res = await fetch("/api/policy/extract", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mode: "seeded" }),
-        });
+        const extracted = await extractSeededPolicy();
+        data = { facts: extracted.facts };
+        source = extracted.source;
       } else {
         const form = new FormData();
         form.append("file", file!);
-        res = await fetch("/api/policy/extract", { method: "POST", body: form });
-      }
+        const res = await fetch("/api/policy/extract", { method: "POST", body: form });
 
-      if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(body?.error ?? "Could not read the policy document.");
+        if (!res.ok) {
+          const body = (await res.json().catch(() => null)) as { error?: string } | null;
+          throw new Error(
+            body?.error ??
+              "Could not read the policy document. Use the sample policy or enter facts manually to continue the demo."
+          );
+        }
+        data = (await res.json()) as ExtractResponse & { fallback?: boolean };
+        source = data.fallback ? "sample-fallback" : "uploaded";
       }
-      const data = (await res.json()) as ExtractResponse & { fallback?: boolean };
-      const source: PolicyWorkspaceSource = data.fallback
-        ? "sample-fallback"
-        : mode === "seeded"
-          ? "sample"
-          : "uploaded";
 
       savePolicyWorkspace(data.facts, source);
       updateWorkspace((current) => ({
@@ -270,6 +300,76 @@ export default function CaseReviewPage() {
         ],
       }));
       setActiveStep(1);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  async function compareEvidence(
+    facts: PolicyFact[],
+    statements: UserStatement[]
+  ) {
+    const res = await fetch("/api/statements/compare", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ facts, statements }),
+    });
+    if (!res.ok) throw new Error("Evidence review failed.");
+    const data = (await res.json()) as CompareResponse;
+    if (data.blocked) throw new Error(data.blockReason);
+    return data;
+  }
+
+  async function fetchMeetingReport(
+    facts: PolicyFact[],
+    comparisons: SourceComparison[],
+    calculations: CalculationCard[]
+  ) {
+    const res = await fetch("/api/report/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ facts, comparisons, calculations }),
+    });
+    if (!res.ok) throw new Error("Meeting pack generation failed.");
+    const data = (await res.json()) as ReportResponse;
+    return data.report;
+  }
+
+  async function startSeededDemo() {
+    if (!workspace) return;
+    setError(null);
+    setLoading("Starting seeded demo");
+    try {
+      const { facts, source } = await extractSeededPolicy();
+      const statements = SEEDED_STATEMENTS;
+      const evidence = await compareEvidence(facts, statements);
+      const report = await fetchMeetingReport(
+        facts,
+        evidence.comparisons,
+        evidence.calculations
+      );
+      savePolicyWorkspace(facts, source);
+      saveCheckWorkspace(statements, evidence.comparisons, evidence.calculations);
+      const next: CaseWorkspace = {
+        ...workspace,
+        facts,
+        factsSource: source,
+        statements,
+        comparisons: evidence.comparisons,
+        calculations: evidence.calculations,
+        report,
+        events: [
+          ...workspace.events,
+          createCaseEvent(
+            "Seeded demo generated",
+            "Sample policy facts, adviser claims, evidence comparisons, calculations, and meeting pack were prepared."
+          ),
+        ],
+      };
+      persist(next);
+      setActiveStep(3);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
@@ -363,6 +463,11 @@ export default function CaseReviewPage() {
 
   function addClaim() {
     if (!claimInput.trim()) return;
+    const warning = checkCompliance(claimInput);
+    if (warning.blocked) {
+      setError(warning.redirect);
+      return;
+    }
     const statement = newStatement(claimInput.trim());
     updateWorkspace((current) => ({
       ...current,
@@ -402,37 +507,70 @@ export default function CaseReviewPage() {
     setError(null);
     setLoading("Checking claims against policy facts");
     try {
-      const res = await fetch("/api/statements/compare", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          facts: workspace.facts,
-          statements: workspace.statements,
-        }),
-      });
-      if (!res.ok) throw new Error("Evidence review failed.");
-      const data = (await res.json()) as CompareResponse;
-      if (data.blocked) throw new Error(data.blockReason);
+      const data = await compareEvidence(workspace.facts, workspace.statements);
+      const nextComparisons = data.comparisons;
+      const nextCalculations = data.calculations;
 
       saveCheckWorkspace(
         workspace.statements,
-        data.comparisons,
-        data.calculations
+        nextComparisons,
+        nextCalculations
       );
       updateWorkspace((current) => ({
         ...current,
-        comparisons: data.comparisons,
-        calculations: data.calculations,
+        comparisons: nextComparisons,
+        calculations: nextCalculations,
         report: null,
         events: [
           ...current.events,
           createCaseEvent(
             "Evidence review generated",
-            `${data.comparisons.length} claims checked and ${data.calculations.length} calculations produced.`
+            `${nextComparisons.length} claims checked and ${nextCalculations.length} calculations produced.`
           ),
         ],
       }));
       setActiveStep(2);
+      await generateReport(nextComparisons, nextCalculations);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  async function generateReport(
+    nextComparisons?: SourceComparison[],
+    nextCalculations?: CalculationCard[]
+  ) {
+    if (!workspace) return;
+    const comparisons = nextComparisons ?? workspace.comparisons;
+    const calculations = nextCalculations ?? workspace.calculations;
+    if (comparisons.length === 0 || calculations.length === 0) {
+      return;
+    }
+
+    setError(null);
+    setLoading("Generating meeting-prep pack");
+    try {
+      const report = await fetchMeetingReport(
+        workspace.facts,
+        comparisons,
+        calculations
+      );
+      updateWorkspace((current) => ({
+        ...current,
+        comparisons,
+        calculations,
+        report,
+        events: [
+          ...current.events,
+          createCaseEvent(
+            "Meeting pack prepared",
+            `${report.questionsForLicensedAdviser.length} adviser questions were assembled.`
+          ),
+        ],
+      }));
+      setActiveStep(3);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
@@ -444,44 +582,9 @@ export default function CaseReviewPage() {
     if (!workspace) return;
     if (workspace.comparisons.length === 0) {
       await runEvidenceReview();
-    }
-
-    const latest = loadCaseWorkspace() ?? workspace;
-    if (latest.comparisons.length === 0 || latest.calculations.length === 0) {
       return;
     }
-
-    setError(null);
-    setLoading("Generating meeting-prep pack");
-    try {
-      const res = await fetch("/api/report/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          facts: latest.facts,
-          comparisons: latest.comparisons,
-          calculations: latest.calculations,
-        }),
-      });
-      if (!res.ok) throw new Error("Meeting pack generation failed.");
-      const data = (await res.json()) as ReportResponse;
-      updateWorkspace((current) => ({
-        ...current,
-        report: data.report,
-        events: [
-          ...current.events,
-          createCaseEvent(
-            "Meeting pack prepared",
-            `${data.report.questionsForLicensedAdviser.length} adviser questions were assembled.`
-          ),
-        ],
-      }));
-      setActiveStep(3);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong.");
-    } finally {
-      setLoading(null);
-    }
+    await generateReport();
   }
 
   function testFirewall() {
@@ -585,6 +688,7 @@ export default function CaseReviewPage() {
               workspace={workspace}
               updateContext={updateContext}
               loadSample={() => void loadPolicy("seeded")}
+              startSeededDemo={() => void startSeededDemo()}
               triggerUpload={() => fileRef.current?.click()}
               startManualFactSheet={startManualFactSheet}
             />
@@ -607,6 +711,7 @@ export default function CaseReviewPage() {
             <ClaimStep
               workspace={workspace}
               claimInput={claimInput}
+              claimWarning={claimWarning}
               setClaimInput={setClaimInput}
               addClaim={addClaim}
               addSeedClaims={addSeedClaims}
@@ -646,20 +751,29 @@ function IntakeStep({
   workspace,
   updateContext,
   loadSample,
+  startSeededDemo,
   triggerUpload,
   startManualFactSheet,
 }: {
   workspace: CaseWorkspace;
   updateContext: (key: keyof CaseWorkspace["context"], value: string) => void;
   loadSample: () => void;
+  startSeededDemo: () => void;
   triggerUpload: () => void;
   startManualFactSheet: () => void;
 }) {
   const [selectedTopic, setSelectedTopic] =
     useState<OfficialSource["topic"]>("distribution-cost");
+  const [askQuestion, setAskQuestion] = useState(ASK_TOPICS[0].question);
+  const [askAnswer, setAskAnswer] = useState("");
   const selectedSources = OFFICIAL_SOURCES.filter(
     (source) => source.topic === selectedTopic
   );
+  const selectedPreset = ASK_TOPICS.find((topic) => topic.topic === selectedTopic);
+
+  function answerAskQuestion() {
+    setAskAnswer(buildAskAnswer(askQuestion, selectedSources));
+  }
 
   return (
     <section className="space-y-8">
@@ -676,7 +790,11 @@ function IntakeStep({
           {ASK_TOPICS.map((topic) => (
             <button
               key={topic.topic}
-              onClick={() => setSelectedTopic(topic.topic)}
+              onClick={() => {
+                setSelectedTopic(topic.topic);
+                setAskQuestion(topic.question);
+                setAskAnswer("");
+              }}
               className={`shrink-0 border px-3 py-2 text-sm transition ${
                 selectedTopic === topic.topic
                   ? "border-black bg-black text-[#fdfcfc]"
@@ -690,11 +808,25 @@ function IntakeStep({
         <div className="mt-5 grid gap-5 lg:grid-cols-[0.75fr_1.25fr]">
           <div>
             <p className="text-sm text-[#777169]">User question</p>
-            <p className="mt-2 text-xl leading-8">
-              {ASK_TOPICS.find((topic) => topic.topic === selectedTopic)?.question}
+            <textarea
+              value={askQuestion}
+              onChange={(event) => setAskQuestion(event.target.value)}
+              className="mt-2 min-h-28 w-full resize-none border border-[#e5e5e5] bg-white px-4 py-3 text-xl leading-8 outline-none focus:border-black"
+            />
+            <button onClick={answerAskQuestion} className="primary-button mt-3">
+              Ask source-backed question
+            </button>
+            <p className="mt-3 text-xs leading-5 text-[#777169]">
+              Preset: {selectedPreset?.label}. Answers stay factual and point
+              back to official-source context.
             </p>
           </div>
           <div className="space-y-3">
+            {askAnswer && (
+              <div className="border border-black bg-white p-4 text-sm leading-6 whitespace-pre-line">
+                {askAnswer}
+              </div>
+            )}
             {selectedSources.length > 0 ? (
               selectedSources.map((source) => (
                 <blockquote
@@ -770,6 +902,9 @@ function IntakeStep({
           body="Use the hackathon sample for a reliable demo, or upload a PDF when the API key is configured. Uploaded PDFs are processed for extraction and are not saved into the workspace; only extracted facts are kept in this browser session."
         >
           <div className="flex flex-wrap gap-3">
+            <button onClick={startSeededDemo} className="primary-button">
+              Start seeded demo
+            </button>
             <button onClick={loadSample} className="primary-button">
               Use sample policy
             </button>
@@ -911,6 +1046,7 @@ function FactsStep({
 function ClaimStep({
   workspace,
   claimInput,
+  claimWarning,
   setClaimInput,
   addClaim,
   addSeedClaims,
@@ -920,6 +1056,7 @@ function ClaimStep({
 }: {
   workspace: CaseWorkspace;
   claimInput: string;
+  claimWarning: ReturnType<typeof checkCompliance>;
   setClaimInput: (value: string) => void;
   addClaim: () => void;
   addSeedClaims: () => void;
@@ -936,13 +1073,26 @@ function ClaimStep({
       />
 
       <div className="grid gap-4 lg:grid-cols-[1fr_auto]">
-        <input
-          value={claimInput}
-          onChange={(event) => setClaimInput(event.target.value)}
-          onKeyDown={(event) => event.key === "Enter" && addClaim()}
-          placeholder="Paste an adviser claim, e.g. You can access your money anytime"
-          className="border border-[#e5e5e5] bg-white px-4 py-3 text-sm outline-none focus:border-black"
-        />
+        <div>
+          <input
+            value={claimInput}
+            onChange={(event) => setClaimInput(event.target.value)}
+            onKeyDown={(event) => event.key === "Enter" && addClaim()}
+            placeholder="Paste an adviser claim, e.g. You can access your money anytime"
+            className="w-full border border-[#e5e5e5] bg-white px-4 py-3 text-sm outline-none focus:border-black"
+          />
+          {claimInput.trim() && (
+            <p
+              className={`mt-2 text-xs leading-5 ${
+                claimWarning.blocked ? "text-red-700" : "text-[#777169]"
+              }`}
+            >
+              {claimWarning.blocked
+                ? claimWarning.redirect
+                : "Allowed: CoverPilot will treat this as a factual claim to check against sources."}
+            </p>
+          )}
+        </div>
         <div className="flex gap-3">
           <button onClick={addClaim} className="secondary-button">
             Add claim
