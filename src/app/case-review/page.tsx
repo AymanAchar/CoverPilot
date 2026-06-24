@@ -17,7 +17,7 @@ export default function CaseReviewRedirectPage() {
   }, []);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[var(--background)] px-6 text-[var(--foreground)]">
+    <main className="flex min-h-[100dvh] items-center justify-center bg-[var(--background)] px-6 text-[var(--foreground)]">
       <div className="max-w-md text-center">
         <p className="cg-kicker">CoverPilot</p>
         <h1 className="font-display mt-4 text-4xl font-light">

@@ -101,30 +101,37 @@ export default function DecodePage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white px-6 py-10">
-      <div className="max-w-3xl mx-auto space-y-6">
-        <Link href="/" className="text-slate-400 hover:text-white text-sm">
-          ← Home
-        </Link>
-        <div className="flex gap-4 text-sm">
-          <Link href="/check" className="text-slate-400 hover:text-white">
-            Check
+    <main className="cp-page">
+      <div className="cp-shell">
+        <header className="cp-nav">
+          <Link href="/" className="font-display text-2xl font-light">
+            CoverPilot
           </Link>
-          <Link href="/my-case" className="text-slate-400 hover:text-white">
-            My Case
-          </Link>
-        </div>
+          <nav className="cp-nav-links">
+            <Link href="/check">Check</Link>
+            <Link href="/ask">Ask</Link>
+            <Link href="/my-case">My Case</Link>
+          </nav>
+        </header>
 
-        <div>
-          <h1 className="text-2xl font-bold">Understand a financial document</h1>
-          <p className="text-slate-400 mt-1">
+        <div className="cp-workspace">
+          <section className="cp-route-header">
+            <div>
+              <p className="cg-kicker">Decode</p>
+              <h1 className="cp-route-title">Understand a financial document.</h1>
+            </div>
+            <p className="cp-route-copy">
             Upload a policy illustration or financial document to extract the
             figures you want to understand.
           </p>
-        </div>
+            <div className="cp-empty">
+              Start with your own PDF. Sample data is available only as a demo.
+            </div>
+          </section>
 
+          <section className="cp-stack">
         {!facts && !loadingStep && (
-          <div className="space-y-3">
+              <div className="cp-panel cp-panel-pad cp-stack">
             <input
               ref={fileRef}
               type="file"
@@ -134,39 +141,39 @@ export default function DecodePage() {
             />
             <button
               onClick={() => fileRef.current?.click()}
-              className="bg-blue-600 hover:bg-blue-500 text-white font-medium px-5 py-2.5 rounded-lg transition-colors"
+                  className="primary-button w-fit"
             >
               Upload PDF
             </button>
 
             <button
               onClick={loadSeeded}
-              className="block text-slate-500 hover:text-slate-300 text-xs underline underline-offset-4"
+                  className="cp-quiet-link w-fit"
             >
               Try with a sample policy
             </button>
 
-            <p className="text-slate-500 text-xs">
+                <p className="text-xs text-[var(--muted)]">
               Documents are processed in-session only and not stored.
             </p>
           </div>
         )}
 
         {loadingStep && (
-          <div className="space-y-3">
+              <div className="cp-panel cp-panel-pad space-y-3">
             {LOADING_STEPS.map((step) => {
               const current = LOADING_STEPS.indexOf(loadingStep);
               const idx = LOADING_STEPS.indexOf(step);
               return (
                 <div key={step} className="flex items-center gap-3 text-sm">
                   {idx < current ? (
-                    <span className="text-green-400 w-4">✓</span>
+                        <span className="w-12 text-[var(--success)]">Done</span>
                   ) : idx === current ? (
-                    <span className="inline-block w-4 h-4 border-2 border-slate-600 border-t-blue-400 rounded-full animate-spin" />
+                        <span className="inline-block h-4 w-4 animate-spin rounded-full border border-[var(--line)] border-t-[var(--foreground)]" />
                   ) : (
-                    <span className="w-4 h-4 rounded-full border border-slate-700" />
+                        <span className="h-4 w-4 rounded-full border border-[var(--line)]" />
                   )}
-                  <span className={idx <= current ? "text-slate-200" : "text-slate-600"}>
+                      <span className={idx <= current ? "text-[var(--foreground)]" : "text-[var(--soft)]"}>
                     {step}
                   </span>
                 </div>
@@ -176,11 +183,11 @@ export default function DecodePage() {
         )}
 
         {error && (
-          <div className="bg-red-950 border border-red-800 rounded-lg p-4">
-            <p className="text-red-300 text-sm">{error}</p>
+              <div className="cp-error">
+                <p>{error}</p>
             <button
               onClick={() => setError(null)}
-              className="text-red-400 text-xs mt-2 underline"
+                  className="mt-2 text-xs underline underline-offset-4"
             >
               Try again
             </button>
@@ -190,34 +197,34 @@ export default function DecodePage() {
         {facts && (
           <div className="space-y-3">
             {usedFallback && (
-              <div className="bg-yellow-950 border border-yellow-800 rounded-lg px-4 py-2">
-                <p className="text-yellow-300 text-xs">
+                  <div className="cp-alert">
+                    <p>
                   Could not extract enough data from the uploaded PDF. Showing sample policy instead.
                 </p>
               </div>
             )}
 
-            <p className="text-slate-400 text-sm">
+                <p className="text-sm text-[var(--muted)]">
               {facts.length} facts extracted from the policy document.
             </p>
 
             {facts.map((fact) => (
               <div
                 key={fact.id}
-                className="bg-slate-800 border border-slate-700 rounded-lg p-4 space-y-1"
+                    className="cp-panel cp-panel-pad space-y-2"
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-medium text-sm">{fact.label}</span>
-                  <span className="text-xs text-slate-500 bg-slate-700 px-2 py-0.5 rounded">
+                      <span className="cp-status">
                     {fact.sourceType}
                   </span>
                 </div>
-                <p className="text-slate-200">
+                    <p>
                   {String(fact.value)}
                   {fact.unit ? ` ${fact.unit}` : ""}
                 </p>
                 {fact.quote && (
-                  <blockquote className="text-slate-400 text-xs border-l-2 border-slate-600 pl-3 mt-1 italic">
+                      <blockquote className="cp-source">
                     {fact.quote}
                     {fact.page ? ` (p.${fact.page})` : ""}
                   </blockquote>
@@ -228,7 +235,7 @@ export default function DecodePage() {
             <div className="flex gap-3 pt-2">
               <Link
                 href="/check"
-                className="bg-blue-600 hover:bg-blue-500 text-white font-medium px-5 py-2.5 rounded-lg transition-colors"
+                    className="primary-button"
               >
                 Check statements →
               </Link>
@@ -238,14 +245,16 @@ export default function DecodePage() {
                   setFacts(null);
                   setUsedFallback(false);
                 }}
-                className="text-slate-400 hover:text-white text-sm px-4 py-2.5"
+                    className="secondary-button"
               >
                 Load different policy
               </button>
             </div>
           </div>
         )}
+          </section>
+        </div>
       </div>
-    </div>
+    </main>
   );
 }

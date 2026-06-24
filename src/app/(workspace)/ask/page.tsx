@@ -84,49 +84,40 @@ export default function AskPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 px-6 py-10 text-white">
-      <div className="mx-auto max-w-3xl space-y-6">
-        <div className="flex items-center gap-3">
-          <Link href="/" className="text-sm text-slate-400 hover:text-white">
-            ← Home
+    <main className="cp-page">
+      <div className="cp-shell">
+        <header className="cp-nav">
+          <Link href="/" className="font-display text-2xl font-light">
+            CoverPilot
           </Link>
-          <Link href="/check" className="text-sm text-slate-400 hover:text-white">
-            Check
-          </Link>
-          <Link href="/decode" className="text-sm text-slate-400 hover:text-white">
-            Decode
-          </Link>
-          <Link href="/my-case" className="text-sm text-slate-400 hover:text-white">
-            My Case
-          </Link>
-        </div>
+          <nav className="cp-nav-links">
+            <Link href="/check">Check</Link>
+            <Link href="/decode">Decode</Link>
+            <Link href="/my-case">My Case</Link>
+          </nav>
+        </header>
 
-        <div>
-          <h1 className="text-2xl font-bold">Ask a financial question</h1>
-          <p className="mt-1 text-slate-400">
+        <div className="cp-workspace">
+          <section className="cp-route-header">
+            <div>
+              <p className="cg-kicker">Ask</p>
+              <h1 className="cp-route-title">Ask a financial question.</h1>
+            </div>
+            <p className="cp-route-copy">
             Ask about Singapore insurance or financial-advisory concepts.
             CoverPilot answers with policy context, public guidance, and
             questions for a licensed adviser.
           </p>
-        </div>
+            <div className="cp-empty">
+              {facts.length > 0
+                ? `${facts.length} document facts can be used as context.`
+                : "No document loaded. Answers will use public guidance until you decode a document."}
+            </div>
+          </section>
 
-        <div className="rounded-lg border border-slate-800 bg-slate-900 p-4">
-          <p className="text-sm font-medium text-slate-300">
-            Context available: {facts.length} policy facts
-          </p>
-          <p className="mt-1 text-xs text-slate-500">
-            {policySource === "uploaded"
-              ? "Using facts extracted from your uploaded document."
-              : policySource === "sample-fallback"
-                ? "Using sample facts because upload extraction fell back."
-                : facts.length > 0
-                  ? "Using saved document facts from this browser."
-                  : "No document loaded. Answers will use public guidance until you decode a document."}
-          </p>
-        </div>
-
-        <div className="space-y-4 rounded-xl border border-slate-800 bg-slate-900 p-5">
-          <label htmlFor="financial-question" className="text-sm font-medium text-slate-200">
+          <section className="cp-stack">
+            <div className="cp-panel cp-panel-pad cp-stack">
+              <label htmlFor="financial-question" className="cp-label">
             What do you want to understand?
           </label>
           <textarea
@@ -138,10 +129,10 @@ export default function AskPage() {
             }}
             placeholder="Example: What should I check before signing a whole life policy?"
             rows={5}
-            className="w-full resize-none rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white placeholder-slate-600 focus:border-blue-500 focus:outline-none"
+                className="cp-input"
           />
 
-          <div className="flex flex-wrap gap-2">
+              <div className="cp-chip-row">
             {EXAMPLE_QUESTIONS.map((example) => (
               <button
                 key={example}
@@ -149,7 +140,7 @@ export default function AskPage() {
                   setQuestion(example);
                   void askQuestion(example);
                 }}
-                className="rounded-full border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs text-slate-300 transition-colors hover:border-blue-500 hover:text-white"
+                    className="cp-chip"
               >
                 {example}
               </button>
@@ -159,40 +150,40 @@ export default function AskPage() {
           <button
             onClick={() => void askQuestion()}
             disabled={!!loadingStep}
-            className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+                className="primary-button w-fit disabled:opacity-50"
           >
             {loadingStep ?? "Answer question"}
           </button>
         </div>
 
         {loadingStep && (
-          <div className="flex items-center gap-3 text-sm text-slate-400">
-            <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-600 border-t-blue-400" />
+              <div className="flex items-center gap-3 text-sm text-[var(--muted)]">
+                <span className="inline-block h-4 w-4 animate-spin rounded-full border border-[var(--line)] border-t-[var(--foreground)]" />
             {loadingStep}
           </div>
         )}
 
         {error && (
-          <div className="rounded-lg border border-red-800 bg-red-950 p-4">
-            <p className="text-sm text-red-300">{error}</p>
+              <div className="cp-error">
+                <p>{error}</p>
           </div>
         )}
 
         {answer?.blocked && (
-          <div className="space-y-2 rounded-lg border border-amber-800 bg-amber-950 p-4">
-            <p className="font-semibold text-amber-200">CoverPilot cannot answer that directly</p>
-            <p className="text-sm text-amber-100">{answer.blockReason}</p>
+              <div className="cp-alert space-y-2">
+                <p className="font-semibold">CoverPilot cannot answer that directly</p>
+                <p>{answer.blockReason}</p>
           </div>
         )}
 
         {answer && !answer.blocked && (
           <div className="space-y-5">
-            <div className="rounded-lg border border-slate-700 bg-slate-800 p-4">
-              <p className="font-mono text-xs uppercase tracking-wide text-slate-500">
+                <div className="cp-panel cp-panel-pad">
+                  <p className="cp-source-label">
                 Routed topic
               </p>
               <h2 className="mt-2 text-lg font-semibold">{answer.topic}</h2>
-              <div className="mt-4 space-y-3 text-sm leading-6 text-slate-300">
+                  <div className="mt-4 space-y-3 text-sm leading-6 text-[var(--muted)]">
                 {answer.answer?.map((paragraph) => (
                   <p key={paragraph}>{paragraph}</p>
                 ))}
@@ -205,17 +196,17 @@ export default function AskPage() {
                 {answer.sourceFacts.map((fact) => (
                   <div
                     key={fact.id}
-                    className="rounded-lg border border-slate-700 bg-slate-800 p-4 text-sm"
+                        className="cp-source"
                   >
                     <div className="mb-2 flex items-center justify-between gap-3">
                       <p className="font-medium">{fact.label}</p>
-                      <span className="rounded border border-slate-600 px-2 py-0.5 font-mono text-[10px] uppercase text-slate-400">
+                          <span className="cp-status">
                         {fact.sourceType === "official-source"
                           ? fact.sourceName
                           : "Policy"}
                       </span>
                     </div>
-                    <blockquote className="border-l-2 border-slate-600 pl-3 text-xs italic text-slate-400">
+                        <blockquote>
                       {fact.quote ?? String(fact.value)}
                       {fact.page ? ` (p.${fact.page})` : ""}
                     </blockquote>
@@ -224,7 +215,7 @@ export default function AskPage() {
                         href={fact.sourceUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="mt-2 inline-block text-xs text-blue-300 underline underline-offset-4 hover:text-blue-200"
+                            className="cp-quiet-link mt-2 inline-block"
                       >
                         View source
                       </a>
@@ -235,11 +226,11 @@ export default function AskPage() {
             )}
 
             {!!answer.questionsForLicensedAdviser?.length && (
-              <div className="rounded-lg border border-blue-900 bg-blue-950/40 p-4">
-                <h2 className="text-lg font-semibold text-blue-100">
+                  <div className="cp-panel cp-panel-pad">
+                    <h2 className="text-lg font-semibold">
                   Ask a licensed adviser
                 </h2>
-                <ul className="mt-3 space-y-2 text-sm text-blue-100">
+                    <ul className="mt-3 space-y-2 text-sm leading-6 text-[var(--muted)]">
                   {answer.questionsForLicensedAdviser.map((item) => (
                     <li key={item}>• {item}</li>
                   ))}
@@ -253,7 +244,7 @@ export default function AskPage() {
                   <Link
                     key={action.href}
                     href={action.href}
-                    className="rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-800"
+                        className="secondary-button"
                   >
                     {action.label}
                   </Link>
@@ -261,12 +252,14 @@ export default function AskPage() {
               </div>
             )}
 
-            <p className="text-xs leading-5 text-slate-500">
+                <p className="text-xs leading-5 text-[var(--muted)]">
               {answer.complianceNotice}
             </p>
           </div>
         )}
+          </section>
+        </div>
       </div>
-    </div>
+    </main>
   );
 }

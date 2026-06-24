@@ -110,66 +110,55 @@ export default function PreparePage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white px-6 py-10">
-      <div className="max-w-3xl mx-auto space-y-6">
-        <div className="flex items-center gap-3">
-          <Link href="/" className="text-slate-400 hover:text-white text-sm">
-            ← Home
+    <main className="cp-page">
+      <div className="cp-shell">
+        <header className="cp-nav">
+          <Link href="/" className="font-display text-2xl font-light">
+            CoverPilot
           </Link>
-          <Link href="/check" className="text-slate-400 hover:text-white text-sm">
-            Check
-          </Link>
-          <Link href="/my-case" className="text-slate-400 hover:text-white text-sm">
-            My Case
-          </Link>
-        </div>
+          <nav className="cp-nav-links">
+            <Link href="/check">Check</Link>
+            <Link href="/decode">Decode</Link>
+            <Link href="/my-case">My Case</Link>
+          </nav>
+        </header>
 
-        <div>
-          <h1 className="text-2xl font-bold">📋 Prepare</h1>
-          <p className="text-slate-400 mt-1">
+        <div className="cp-workspace">
+          <section className="cp-route-header">
+            <div>
+              <p className="cg-kicker">Prepare</p>
+              <h1 className="cp-route-title">Prepare for the adviser meeting.</h1>
+            </div>
+            <p className="cp-route-copy">
             Your meeting-prep report — sourced facts, calculations, and questions
             for your licensed adviser.
           </p>
-        </div>
+            <div className="cp-empty">
+              {facts.length} policy facts. {statements.length} checked claim(s).
+            </div>
+          </section>
 
-        <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
-          <p className="text-slate-300 text-sm font-medium">
-            Report source: {facts.length} policy facts
-          </p>
-          <p className="text-slate-500 text-xs mt-1">
-            {savedComparisons && savedCalculations
-              ? "Using the latest statement checks from the Check page."
-              : "No saved statement checks found yet. Run Check first to prepare a meeting pack."}
-            {" "}
-            {policySource === "uploaded"
-              ? "Policy facts came from an uploaded PDF."
-              : policySource === "sample-fallback"
-                ? "Policy facts are sample fallback data."
-                : facts.length > 0
-                  ? "Using saved document facts from this browser."
-                  : "No financial document loaded yet."}
-          </p>
-        </div>
+          <section className="cp-stack">
 
         {!report && (facts.length === 0 || statements.length === 0) && (
-          <div className="rounded-lg border border-slate-800 bg-slate-900 p-5">
-            <p className="text-sm font-medium text-slate-200">
+              <div className="cp-panel cp-panel-pad">
+                <p className="text-sm font-medium">
               Prepare needs a document and at least one checked adviser claim.
             </p>
-            <p className="mt-2 text-sm leading-6 text-slate-500">
+                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
               This page should not invent a sample meeting pack before you have
               added your own material.
             </p>
-            <div className="mt-4 flex flex-wrap gap-3">
+                <div className="mt-4 flex flex-wrap gap-3">
               <Link
                 href="/decode"
-                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500"
+                    className="primary-button"
               >
                 Understand a document
               </Link>
               <Link
                 href="/check"
-                className="rounded-lg border border-slate-700 bg-slate-950 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-800"
+                    className="secondary-button"
               >
                 Check what my adviser said
               </Link>
@@ -182,26 +171,26 @@ export default function PreparePage() {
             <button
               onClick={generateReport}
               disabled={!!loadingStep}
-              className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-medium px-5 py-2.5 rounded-lg transition-colors"
+                  className="primary-button disabled:opacity-50"
             >
               {loadingStep ?? "Generate meeting-prep report"}
             </button>
 
             {loadingStep && (
-              <div className="space-y-2">
+                  <div className="cp-panel cp-panel-pad space-y-2">
                 {LOADING_STEPS.map((step) => {
                   const current = LOADING_STEPS.indexOf(loadingStep);
                   const idx = LOADING_STEPS.indexOf(step);
                   return (
                     <div key={step} className="flex items-center gap-3 text-sm">
                       {idx < current ? (
-                        <span className="text-green-400 w-4">✓</span>
+                            <span className="w-12 text-[var(--success)]">Done</span>
                       ) : idx === current ? (
-                        <span className="inline-block w-4 h-4 border-2 border-slate-600 border-t-blue-400 rounded-full animate-spin" />
+                            <span className="inline-block h-4 w-4 animate-spin rounded-full border border-[var(--line)] border-t-[var(--foreground)]" />
                       ) : (
-                        <span className="w-4 h-4 rounded-full border border-slate-700" />
+                            <span className="h-4 w-4 rounded-full border border-[var(--line)]" />
                       )}
-                      <span className={idx <= current ? "text-slate-200" : "text-slate-600"}>
+                          <span className={idx <= current ? "text-[var(--foreground)]" : "text-[var(--soft)]"}>
                         {step}
                       </span>
                     </div>
@@ -211,8 +200,8 @@ export default function PreparePage() {
             )}
 
             {error && (
-              <div className="bg-red-950 border border-red-800 rounded-lg p-4">
-                <p className="text-red-300 text-sm">{error}</p>
+                  <div className="cp-error">
+                    <p>{error}</p>
               </div>
             )}
           </div>
@@ -221,12 +210,12 @@ export default function PreparePage() {
         {report && (
           <div className="space-y-8">
             <section className="space-y-3">
-              <h2 className="font-semibold text-lg border-b border-slate-700 pb-2">
+                  <h2 className="border-b border-[var(--line)] pb-2 text-lg font-semibold">
                 Policy Facts
               </h2>
               {report.policySummary.slice(0, 6).map((fact) => (
                 <div key={fact.id} className="flex justify-between gap-4 text-sm">
-                  <span className="text-slate-400">{fact.label}</span>
+                      <span className="text-[var(--muted)]">{fact.label}</span>
                   <span className="font-medium text-right">
                     {String(fact.value)}
                     {fact.unit ? ` ${fact.unit}` : ""}
@@ -236,41 +225,43 @@ export default function PreparePage() {
             </section>
 
             <section className="space-y-3">
-              <h2 className="font-semibold text-lg border-b border-slate-700 pb-2">
+                  <h2 className="border-b border-[var(--line)] pb-2 text-lg font-semibold">
                 Calculations
               </h2>
               {report.calculations.map((c) => (
                 <div
                   key={c.id}
-                  className="bg-slate-800 border border-slate-700 rounded-lg p-4"
+                      className="cp-panel cp-panel-pad"
                 >
-                  <p className="text-sm text-slate-400">{c.title}</p>
-                  <p className="text-xl font-bold mt-1">{c.result}</p>
-                  <p className="text-slate-500 text-xs mt-1">{c.caveat}</p>
+                      <p className="text-sm text-[var(--muted)]">{c.title}</p>
+                      <p className="mt-1 text-xl font-semibold">{c.result}</p>
+                      <p className="mt-1 text-xs text-[var(--muted)]">{c.caveat}</p>
                 </div>
               ))}
             </section>
 
             <section className="space-y-3">
-              <h2 className="font-semibold text-lg border-b border-slate-700 pb-2">
+                  <h2 className="border-b border-[var(--line)] pb-2 text-lg font-semibold">
                 Questions for Your Licensed Adviser
               </h2>
               <ol className="space-y-2">
                 {report.questionsForLicensedAdviser.map((q, i) => (
                   <li key={i} className="flex gap-3 text-sm">
-                    <span className="text-slate-500 shrink-0">{i + 1}.</span>
-                    <span className="text-slate-200">{q}</span>
+                        <span className="shrink-0 text-[var(--muted)]">{i + 1}.</span>
+                        <span>{q}</span>
                   </li>
                 ))}
               </ol>
             </section>
 
-            <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
-              <p className="text-slate-400 text-xs">{report.complianceNotice}</p>
+                <div className="cp-empty">
+                  <p>{report.complianceNotice}</p>
             </div>
           </div>
         )}
+          </section>
+        </div>
       </div>
-    </div>
+    </main>
   );
 }
