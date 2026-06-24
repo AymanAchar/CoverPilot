@@ -76,3 +76,19 @@ test("policy extraction has deterministic fallback when OpenAI fails", async () 
   assert.doesNotMatch(extractRoute, /PDF upload extraction requires OPENAI_API_KEY/);
   assert.match(extractRoute, /fallback: result\.source === "deterministic-fallback"/);
 });
+
+test("decode route shows ClearFA-level analysis, not only extracted facts", async () => {
+  const decodePage = await read("src/app/(workspace)/decode/page.tsx");
+  const documentAnalysis = await read("src/lib/document-analysis.ts");
+  const extract = await read("src/lib/extract.ts");
+
+  assert.match(decodePage, /buildDocumentAnalysis/);
+  assert.match(decodePage, /Deep document analysis/);
+  assert.match(decodePage, /Breakeven/);
+  assert.match(decodePage, /Ask your adviser/);
+  assert.match(documentAnalysis, /distributionCostRatio/);
+  assert.match(documentAnalysis, /realValueAtMaturity/);
+  assert.match(documentAnalysis, /sustainabilityQuestions/);
+  assert.match(extract, /surrender-value-yr20/);
+  assert.match(extract, /projected-surrender-yr20/);
+});

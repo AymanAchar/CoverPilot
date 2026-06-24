@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import type { PolicyFact } from "@/types";
 import Link from "next/link";
+import { buildDocumentAnalysis } from "@/lib/document-analysis";
 import {
   clearPolicyWorkspace,
   createCaseEvent,
@@ -23,6 +24,7 @@ export default function DecodePage() {
   const [error, setError] = useState<string | null>(null);
   const [usedFallback, setUsedFallback] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const analysis = facts ? buildDocumentAnalysis(facts) : null;
 
   async function loadSeeded() {
     await extractFacts("seeded");
@@ -204,7 +206,7 @@ export default function DecodePage() {
         )}
 
         {facts && (
-          <div className="space-y-3">
+          <div className="space-y-5">
             {usedFallback && (
                   <div className="cp-alert">
                     <p>
@@ -219,48 +221,166 @@ export default function DecodePage() {
               {facts.length} facts extracted from the policy document.
             </p>
 
-            {facts.map((fact) => (
-              <div
-                key={fact.id}
-                    className="cp-panel cp-panel-pad space-y-2"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-medium text-sm">{fact.label}</span>
-                      <span className="cp-status">
-                    {fact.sourceType}
-                  </span>
-                </div>
-                    <p>
-                  {String(fact.value)}
-                  {fact.unit ? ` ${fact.unit}` : ""}
-                </p>
-                {fact.quote && (
-                      <blockquote className="cp-source">
-                    {fact.quote}
-                    {fact.page ? ` (p.${fact.page})` : ""}
-                  </blockquote>
-                )}
-              </div>
-            ))}
+                {analysis && (
+                  <div className="space-y-5">
+                    <section className="cp-panel cp-panel-pad space-y-5">
+                      <div>
+                        <p className="cp-source-label">Deep document analysis</p>
+                        <h2 className="text-2xl font-medium tracking-[-0.01em]">
+                          What this policy illustration is really showing
+                        </h2>
+                        <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                          CoverPilot extracts the document figures, then computes the
+                          mechanics that are hard to see at a glance: premium
+                          commitment, distribution cost load, Breakeven, surrender
+                          trade-offs, and projected values in today&apos;s dollars.
+                        </p>
+                      </div>
 
-            <div className="flex gap-3 pt-2">
-              <Link
-                href="/check"
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {analysis.summary.map((metric) => (
+                          <div key={metric.label} className="cp-decode-metric">
+                            <p className="cp-source-label">{metric.label}</p>
+                            <p className="text-xl font-medium">{metric.value}</p>
+                            <p className="mt-2 text-xs leading-5 text-[var(--muted)]">
+                              {metric.note}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+
+                    <section className="space-y-3">
+                      <div>
+                        <p className="cp-source-label">Calculations</p>
+                        <h3 className="text-lg font-medium">Document-derived mechanics</h3>
+                      </div>
+                      {analysis.calculations.map((calc) => (
+                        <div key={calc.id} className="cp-panel cp-panel-pad space-y-3">
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                              <h4 className="font-medium">{calc.title}</h4>
+                              <p className="mt-1 text-sm text-[var(--muted)]">
+                                {calc.formula}
+                              </p>
+                            </div>
+                            <span className="cp-status">calculated</span>
+                          </div>
+                          <p className="text-lg font-medium">{calc.result}</p>
+                          <p className="text-sm leading-6 text-[var(--muted)]">
+                            {calc.caveat}
+                          </p>
+                          {calc.inputs.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {calc.inputs.map((input) => (
+                                <span key={`${calc.id}-${input.id}`} className="cp-status">
+                                  {input.label}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </section>
+
+                    <section className="space-y-3">
+                      <div>
+                        <p className="cp-source-label">Interpretation</p>
+                        <h3 className="text-lg font-medium">How to read the main tables</h3>
+                      </div>
+                      {analysis.sections.map((section) => (
+                        <div key={section.title} className="cp-panel cp-panel-pad space-y-3">
+                          <h4 className="font-medium">{section.title}</h4>
+                          <p className="text-sm leading-6 text-[var(--muted)]">
+                            {section.body}
+                          </p>
+                          {section.facts.length > 0 && (
+                            <div className="space-y-2">
+                              {section.facts.slice(0, 3).map((fact) => (
+                                <blockquote key={`${section.title}-${fact.id}`} className="cp-source">
+                                  <span className="font-medium text-[var(--foreground)]">
+                                    {fact.label}:{" "}
+                                  </span>
+                                  {String(fact.value)}
+                                  {fact.unit ? ` ${fact.unit}` : ""}
+                                  {fact.quote ? ` — ${fact.quote}` : ""}
+                                </blockquote>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </section>
+
+                    <section className="cp-panel cp-panel-pad space-y-3">
+                      <div>
+                        <p className="cp-source-label">Ask your adviser</p>
+                        <h3 className="text-lg font-medium">
+                          Questions to bring into the next meeting
+                        </h3>
+                      </div>
+                      <ol className="space-y-3">
+                        {analysis.sustainabilityQuestions.map((question, index) => (
+                          <li key={question} className="flex gap-3 text-sm leading-6">
+                            <span className="font-mono text-xs text-[var(--soft)]">
+                              {String(index + 1).padStart(2, "0")}
+                            </span>
+                            <span>{question}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    </section>
+                  </div>
+                )}
+
+                <section className="space-y-3">
+                  <div>
+                    <p className="cp-source-label">Extracted source facts</p>
+                    <h3 className="text-lg font-medium">Evidence used by CoverPilot</h3>
+                  </div>
+                  {facts.map((fact) => (
+                    <div
+                      key={fact.id}
+                      className="cp-panel cp-panel-pad space-y-2"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium text-sm">{fact.label}</span>
+                        <span className="cp-status">
+                          {fact.sourceType}
+                        </span>
+                      </div>
+                      <p>
+                        {String(fact.value)}
+                        {fact.unit ? ` ${fact.unit}` : ""}
+                      </p>
+                      {fact.quote && (
+                        <blockquote className="cp-source">
+                          {fact.quote}
+                          {fact.page ? ` (p.${fact.page})` : ""}
+                        </blockquote>
+                      )}
+                    </div>
+                  ))}
+                </section>
+
+                <div className="flex gap-3 pt-2">
+                  <Link
+                    href="/check"
                     className="primary-button"
-              >
-                Check statements →
-              </Link>
-              <button
-                onClick={() => {
-                  clearPolicyWorkspace();
-                  setFacts(null);
-                  setUsedFallback(false);
-                }}
+                  >
+                    Check statements →
+                  </Link>
+                  <button
+                    onClick={() => {
+                      clearPolicyWorkspace();
+                      setFacts(null);
+                      setUsedFallback(false);
+                    }}
                     className="secondary-button"
-              >
-                Load different policy
-              </button>
-            </div>
+                  >
+                    Load different policy
+                  </button>
+                </div>
           </div>
         )}
           </section>

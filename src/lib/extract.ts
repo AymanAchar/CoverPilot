@@ -52,7 +52,34 @@ Extract these facts if present:
 - Illustrated investment rate of return, if stated
 - Charges or fees, including policy fees, management fees, insurance charges, surrender charges, or fund charges
 - Any key exclusions or waiting periods
-- Important cover-page warnings or product-risk statements`;
+- Important cover-page warnings or product-risk statements
+
+Use these canonical IDs whenever the matching value exists:
+- product-name
+- classification
+- annual-premium
+- premium-frequency
+- premium-term
+- policy-term
+- sum-assured
+- death-benefit
+- distribution-cost
+- distribution-cost-yr1
+- surrender-value-yr5
+- surrender-value-yr10
+- surrender-value-yr15
+- surrender-value-yr20
+- surrender-value-yr25
+- surrender-value-yr30
+- projected-surrender-yr5
+- projected-surrender-yr10
+- projected-surrender-yr15
+- projected-surrender-yr20
+- projected-surrender-yr25
+- projected-surrender-yr30
+- illustrated-low-rate
+- illustrated-high-rate
+- non-guaranteed-notice`;
 
 function normalizeText(text: string) {
   return text.replace(/\s+/g, " ").trim();

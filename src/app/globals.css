@@ -274,6 +274,16 @@ body {
   text-transform: uppercase;
 }
 
+.cp-decode-metric {
+  min-height: 9rem;
+  border: 1px solid var(--line);
+  background: var(--surface-muted);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
 .cp-alert {
   border: 1px solid color-mix(in oklch, var(--warning) 35%, var(--line));
   background: color-mix(in oklch, var(--warning) 7%, var(--surface));
