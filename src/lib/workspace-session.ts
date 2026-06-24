@@ -31,7 +31,7 @@ export type CaseWorkspace = {
   statements: UserStatement[];
   comparisons: SourceComparison[];
   calculations: CalculationCard[];
-  reviewSource?: "ai" | "demo-fallback";
+  reviewSource?: "ai" | "deterministic";
   report: MeetingPrepReport | null;
   events: CaseEvent[];
   updatedAt: string;
