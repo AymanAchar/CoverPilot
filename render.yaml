@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: coverpilot
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false

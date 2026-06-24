@@ -33,3 +33,35 @@ Open [http://localhost:3000](http://localhost:3000).
 ## Compliance
 
 CoverPilot does not recommend what to buy, keep, cancel, or switch. The Decision Firewall blocks any prompt requesting financial advice.
+
+## Deployment
+
+The shared GitHub repo can be deployed on Vercel or Render.
+
+### Recommended: Vercel
+
+1. Import `AymanAchar/CoverPilot` into Vercel.
+2. Framework preset: `Next.js`.
+3. Build command: `npm run build`.
+4. Install command: `npm install`.
+5. Add environment variable:
+
+```bash
+OPENAI_API_KEY=<hackathon OpenAI API key>
+```
+
+Vercel will redeploy automatically whenever `main` is pushed.
+
+### Alternative: Render
+
+The repo includes `render.yaml`.
+
+Render settings:
+
+```bash
+Build Command: npm install && npm run build
+Start Command: npm run start
+Environment: OPENAI_API_KEY=<hackathon OpenAI API key>
+```
+
+The homepage evidence review has a deterministic demo fallback, but the full AI-backed API routes should be deployed with `OPENAI_API_KEY` set.
