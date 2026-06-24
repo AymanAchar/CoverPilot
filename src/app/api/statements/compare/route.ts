@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type { CompareRequest, CompareResponse } from "@/types";
 import { checkCompliance } from "@/lib/compliance";
 import { runCalculations } from "@/lib/calculations";
-import { compareStatementWithAI } from "@/lib/compare";
+import { DEMO_COMPARISONS } from "@/data/demo-evidence";
 
 export async function POST(req: NextRequest) {
   const body: CompareRequest = await req.json();
@@ -22,10 +22,21 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Run AI comparisons in parallel
-  const comparisons = await Promise.all(
-    statements.map((stmt) => compareStatementWithAI(stmt, facts))
-  );
+  let comparisons = DEMO_COMPARISONS;
+  if (process.env.OPENAI_API_KEY) {
+    try {
+      const { compareStatementWithAI } = await import("@/lib/compare");
+      // Run AI comparisons in parallel
+      comparisons = await Promise.all(
+        statements.map((stmt) => compareStatementWithAI(stmt, facts))
+      );
+    } catch (error) {
+      console.warn(
+        "AI comparison failed, falling back to seeded demo comparisons",
+        error
+      );
+    }
+  }
 
   const calculations = runCalculations(facts);
 
@@ -36,4 +47,3 @@ export async function POST(req: NextRequest) {
   };
   return NextResponse.json(response);
 }
-
