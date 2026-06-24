@@ -2,19 +2,19 @@ import Link from "next/link";
 
 const USER_JOBS = [
   {
-    title: "Check what I was told",
+    title: "Check what my adviser said",
     body: "Paste an adviser claim and see what the policy facts actually support.",
-    href: "/case-review?mode=claim",
+    href: "/check",
   },
   {
-    title: "Understand this policy",
+    title: "Understand a financial document",
     body: "Load a policy illustration and turn dense figures into cited facts.",
-    href: "/case-review?mode=upload",
+    href: "/decode",
   },
   {
-    title: "Prepare questions",
-    body: "Leave with questions for a licensed adviser, not a recommendation.",
-    href: "/case-review?demo=seeded",
+    title: "Ask a financial question",
+    body: "Ask about Singapore insurance concepts and get source-backed next questions.",
+    href: "/ask",
   },
 ];
 
@@ -47,8 +47,11 @@ export default function Home() {
             <span className="font-display text-xl font-light">CoverPilot</span>
           </div>
           <nav className="flex items-center gap-5 text-sm text-[var(--muted)]">
-            <Link href="/case-review?mode=claim" className="hover:text-[var(--foreground)]">
-              Check Claim
+            <Link href="/check" className="hover:text-[var(--foreground)]">
+              Check
+            </Link>
+            <Link href="/ask" className="hover:text-[var(--foreground)]">
+              Ask
             </Link>
             <Link href="/my-case" className="hover:text-[var(--foreground)]">
               My Case
@@ -69,17 +72,17 @@ export default function Home() {
             recommendations. No commissions. Just evidence and questions.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/case-review?demo=seeded" className="primary-button">
-              Try sample adviser check
+            <Link href="/check" className="primary-button">
+              Start with adviser check
             </Link>
-            <Link href="/case-review?mode=claim" className="secondary-button">
-              Check my own claim
+            <Link href="/ask" className="secondary-button">
+              Ask a question
             </Link>
             <Link
-              href="/case-review?mode=upload"
+              href="/decode"
               className="text-sm leading-10 text-[var(--muted)] underline underline-offset-4 hover:text-[var(--foreground)]"
             >
-              Upload policy illustration
+              Understand a document
             </Link>
           </div>
         </div>
@@ -139,8 +142,8 @@ export default function Home() {
                 Three simple jobs. One evidence engine underneath.
               </h2>
             </div>
-            <Link href="/case-review?demo=seeded" className="secondary-button">
-              See full demo
+            <Link href="/check" className="secondary-button">
+              See adviser check
             </Link>
           </div>
           <div className="cg-process-grid mt-8">

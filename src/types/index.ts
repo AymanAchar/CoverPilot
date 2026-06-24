@@ -109,3 +109,22 @@ export type ReportRequest = {
 export type ReportResponse = {
   report: MeetingPrepReport;
 };
+
+export type FinancialQuestionRequest = {
+  question: string;
+  facts?: PolicyFact[];
+};
+
+export type FinancialQuestionResponse = {
+  blocked: boolean;
+  blockReason?: string;
+  topic?: string;
+  answer?: string[];
+  sourceFacts?: PolicyFact[];
+  questionsForLicensedAdviser?: string[];
+  relatedActions?: Array<{
+    label: string;
+    href: string;
+  }>;
+  complianceNotice?: string;
+};

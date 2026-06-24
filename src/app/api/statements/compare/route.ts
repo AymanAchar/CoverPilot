@@ -4,6 +4,21 @@ import { checkCompliance } from "@/lib/compliance";
 import { runCalculations } from "@/lib/calculations";
 import { compareStatementsDeterministically } from "@/lib/deterministic-compare";
 import { applyRateLimit } from "@/lib/rate-limit";
+import {
+  officialFactsForTopic,
+  topicForText,
+} from "@/lib/financial-topic-intelligence";
+
+function factsWithOfficialSources(facts: CompareRequest["facts"], statements: CompareRequest["statements"]) {
+  const officialFacts = statements.flatMap((statement) =>
+    officialFactsForTopic(topicForText(statement.text))
+  );
+  const unique = new Map(facts.map((fact) => [fact.id, fact]));
+  for (const fact of officialFacts) {
+    unique.set(fact.id, fact);
+  }
+  return Array.from(unique.values());
+}
 
 export async function POST(req: NextRequest) {
   const rateLimited = applyRateLimit(req, {
@@ -47,6 +62,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  const evidenceFacts = factsWithOfficialSources(facts, statements);
   let comparisons = compareStatementsDeterministically(statements, facts);
   let source: CompareResponse["source"] = "deterministic";
   if (process.env.OPENAI_API_KEY) {
@@ -54,7 +70,7 @@ export async function POST(req: NextRequest) {
       const { compareStatementWithAI } = await import("@/lib/compare");
       // Run AI comparisons in parallel
       comparisons = await Promise.all(
-        statements.map((stmt) => compareStatementWithAI(stmt, facts))
+        statements.map((stmt) => compareStatementWithAI(stmt, evidenceFacts))
       );
       source = "ai";
     } catch (error) {
