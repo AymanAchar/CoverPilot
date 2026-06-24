@@ -88,6 +88,7 @@ function buildAskAnswer(question: string, sources: OfficialSource[]) {
   return [
     `Question: ${question}`,
     `CoverPilot answer: ${lead}`,
+    `Sources used: ${sources.length > 0 ? sources.map((source) => `${source.body} (${source.url})`).join("; ") : "policy illustration education context"}`,
     "Use this as meeting preparation only: ask the licensed adviser to point to the exact policy illustration page or official source that supports the claim.",
   ].join("\n\n");
 }
@@ -625,7 +626,7 @@ export default function CaseReviewPage() {
         </div>
       </header>
 
-      <section className="mx-auto grid max-w-[1240px] gap-8 px-5 py-10 lg:grid-cols-[280px_1fr] lg:px-8">
+      <section className="mx-auto grid max-w-[1240px] gap-8 px-5 py-8 lg:grid-cols-[232px_1fr] lg:px-8">
         <aside className="space-y-5">
           <div>
             <p className="text-sm text-[#777169]">Case ID</p>
@@ -658,16 +659,16 @@ export default function CaseReviewPage() {
         </aside>
 
         <div className="space-y-8">
-          <section className="border-b border-[#e5e5e5] pb-8">
+          <section className="border-b border-[#e5e5e5] pb-6">
             <p className="text-sm text-[#777169]">
               Singapore insurance evidence workflow
             </p>
-            <h2 className="font-display mt-3 max-w-[760px] text-5xl font-light leading-tight">
-              Build one sourced case before the next FA conversation.
+            <h2 className="font-display mt-3 max-w-[720px] text-4xl font-light leading-tight">
+              One sourced case before the next FA conversation.
             </h2>
-            <p className="mt-4 max-w-[680px] text-base leading-7 text-[#777169]">
-              Load a policy, capture what was said, run the evidence engine, and
-              leave with questions for a licensed adviser.
+            <p className="mt-3 max-w-[680px] text-sm leading-6 text-[#777169]">
+              Ask from public sources, decode the PI, verify claims against the
+              extracted facts, then prepare questions for a licensed adviser.
             </p>
           </section>
 
@@ -776,17 +777,17 @@ function IntakeStep({
   }
 
   return (
-    <section className="space-y-8">
+    <section className="space-y-7">
       <div className="border border-[#e5e5e5] bg-white p-5">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <SectionHeader
             eyebrow="Ask"
-            title="Start from official-source context."
-            body="This is the InsureLobang FAQ pattern, grounded in MoneySense and LIA-style source snippets before the user moves into their own document."
+            title="Start with cited public guidance."
+            body="Ask factual questions first. CoverPilot answers only from stored MoneySense and LIA source snippets, then carries the case into the policy illustration."
           />
           <SourceBadge label="Official-source" />
         </div>
-        <div className="mt-6 flex gap-2 overflow-x-auto pb-1">
+        <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
           {ASK_TOPICS.map((topic) => (
             <button
               key={topic.topic}
@@ -805,13 +806,13 @@ function IntakeStep({
             </button>
           ))}
         </div>
-        <div className="mt-5 grid gap-5 lg:grid-cols-[0.75fr_1.25fr]">
+        <div className="mt-5 grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
           <div>
             <p className="text-sm text-[#777169]">User question</p>
             <textarea
               value={askQuestion}
               onChange={(event) => setAskQuestion(event.target.value)}
-              className="mt-2 min-h-28 w-full resize-none border border-[#e5e5e5] bg-white px-4 py-3 text-xl leading-8 outline-none focus:border-black"
+              className="mt-2 min-h-24 w-full resize-none border border-[#e5e5e5] bg-white px-4 py-3 text-base leading-7 outline-none focus:border-black"
             />
             <button onClick={answerAskQuestion} className="primary-button mt-3">
               Ask source-backed question
@@ -829,33 +830,24 @@ function IntakeStep({
             )}
             {selectedSources.length > 0 ? (
               selectedSources.map((source) => (
-                <blockquote
-                  key={source.id}
-                  className="border-l border-black bg-[#f5f3f1] px-4 py-3 text-sm leading-6 text-[#777169]"
-                >
-                  <span className="font-medium text-black">{source.body}: </span>
-                  {source.quote}
-                  <span className="mt-2 block font-mono text-xs text-[#a59f97]">
-                    Verified {source.verifiedOn}
-                  </span>
-                </blockquote>
+                <SourceReference key={source.id} source={source} />
               ))
             ) : (
-              <blockquote className="border-l border-black bg-[#f5f3f1] px-4 py-3 text-sm leading-6 text-[#777169]">
-                MoneySense and LIA-style policy illustrations commonly warn
+              <div className="border border-[#e5e5e5] bg-[#f5f3f1] px-4 py-3 text-sm leading-6 text-[#777169]">
+                MoneySense and LIA source entries commonly warn
                 users to check surrender values, distribution cost, guaranteed
                 values, and policy conditions before relying on early-exit or
                 flexibility claims.
                 <span className="mt-2 block font-mono text-xs text-[#a59f97]">
                   Official-source discussion prompt
                 </span>
-              </blockquote>
+              </div>
             )}
           </div>
         </div>
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-[1fr_0.9fr]">
+      <div className="grid gap-6 lg:grid-cols-[1fr_0.86fr]">
       <div className="space-y-5">
         <SectionHeader
           eyebrow="Intake"
@@ -899,13 +891,13 @@ function IntakeStep({
       <div className="space-y-4">
         <ActionPanel
           title="Load policy evidence"
-          body="Use the hackathon sample for a reliable demo, or upload a PDF when the API key is configured. Uploaded PDFs are processed for extraction and are not saved into the workspace; only extracted facts are kept in this browser session."
+          body="For the demo, start with the seeded case. For real usage, upload a PDF or enter PI facts manually; CoverPilot stores extracted facts only."
         >
           <div className="flex flex-wrap gap-3">
             <button onClick={startSeededDemo} className="primary-button">
               Start seeded demo
             </button>
-            <button onClick={loadSample} className="primary-button">
+            <button onClick={loadSample} className="secondary-button">
               Use sample policy
             </button>
             <button onClick={triggerUpload} className="secondary-button">
@@ -916,10 +908,11 @@ function IntakeStep({
             </button>
           </div>
         </ActionPanel>
-        <ActionPanel
-          title="Why this is the wedge"
-          body="This copies the strongest AI startup pattern: automate one high-value first-pass workflow end to end, then expand into the operating layer."
-        />
+        <div className="border border-[#e5e5e5] bg-[#f5f3f1] p-4 text-xs leading-5 text-[#777169]">
+          Resource discipline: public-source answers cite MoneySense/LIA links;
+          policy checks cite extracted PI facts; calculations show formulas and
+          input fields.
+        </div>
       </div>
       </div>
     </section>
@@ -1331,13 +1324,7 @@ function MeetingReport({
         <h3 className="text-sm font-medium">Official-source context</h3>
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           {OFFICIAL_SOURCES.slice(0, 4).map((source) => (
-            <blockquote
-              key={source.id}
-              className="border-l border-black bg-[#f5f3f1] px-4 py-3 text-xs leading-5 text-[#777169]"
-            >
-              <span className="font-medium text-black">{source.body}: </span>
-              {source.quote}
-            </blockquote>
+            <SourceReference key={source.id} source={source} compact />
           ))}
         </div>
       </div>
@@ -1373,13 +1360,28 @@ function ComparisonCard({
       {comparison.documentEvidence.length > 0 && (
         <div className="mt-4 space-y-2">
           {comparison.documentEvidence.map((fact) => (
-            <blockquote
+            <div
               key={fact.id}
-              className="border-l border-black bg-[#f5f3f1] px-4 py-3 text-xs leading-5 text-[#777169]"
+              className="border border-[#e5e5e5] bg-[#f5f3f1] px-4 py-3 text-xs leading-5 text-[#777169]"
             >
               <span className="font-medium text-black">{fact.label}: </span>
               {fact.quote ?? String(fact.value)}
-            </blockquote>
+              {fact.page && (
+                <span className="mt-2 block font-mono text-[11px] text-[#a59f97]">
+                  PI page {fact.page}
+                </span>
+              )}
+              {fact.sourceUrl && (
+                <a
+                  href={fact.sourceUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-2 block font-mono text-[11px] text-black underline underline-offset-4"
+                >
+                  {fact.sourceName ?? "Source"}
+                </a>
+              )}
+            </div>
           ))}
         </div>
       )}
@@ -1393,13 +1395,29 @@ function ComparisonCard({
 function CalculationGrid({ calculations }: { calculations: CalculationCard[] }) {
   return (
     <section className="space-y-4">
-      <h3 className="text-sm font-medium">Deterministic calculations</h3>
+      <h3 className="text-sm font-medium">PI-backed calculations</h3>
       <div className="grid gap-4 md:grid-cols-2">
         {calculations.map((calculation) => (
           <div key={calculation.id} className="border border-[#e5e5e5] bg-white p-4">
             <SourceBadge label="Calculated" />
             <p className="mt-3 text-sm text-[#777169]">{calculation.title}</p>
             <p className="mt-1 text-xl font-light">{calculation.result}</p>
+            <p className="mt-3 border-t border-[#e5e5e5] pt-3 font-mono text-[11px] leading-5 text-[#777169]">
+              {calculation.formula}
+            </p>
+            {calculation.inputs.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {calculation.inputs.map((input) => (
+                  <span
+                    key={input.id}
+                    className="border border-[#e5e5e5] bg-[#f5f3f1] px-2 py-1 text-[11px] text-[#777169]"
+                  >
+                    {input.label}: {String(input.value)}
+                    {input.unit ? ` ${input.unit}` : ""}
+                  </span>
+                ))}
+              </div>
+            )}
             <p className="mt-2 text-xs leading-5 text-[#777169]">
               {calculation.caveat}
             </p>
@@ -1407,6 +1425,36 @@ function CalculationGrid({ calculations }: { calculations: CalculationCard[] }) 
         ))}
       </div>
     </section>
+  );
+}
+
+function SourceReference({
+  source,
+  compact = false,
+}: {
+  source: OfficialSource;
+  compact?: boolean;
+}) {
+  return (
+    <div className="border border-[#e5e5e5] bg-[#f5f3f1] px-4 py-3 text-sm leading-6 text-[#777169]">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="font-medium text-black">{source.body}</span>
+        <a
+          href={source.url}
+          target="_blank"
+          rel="noreferrer"
+          className="font-mono text-[11px] text-black underline underline-offset-4"
+        >
+          Source
+        </a>
+      </div>
+      <p className={compact ? "mt-2 text-xs leading-5" : "mt-2"}>
+        {source.quote}
+      </p>
+      <span className="mt-2 block font-mono text-[11px] text-[#a59f97]">
+        Verified {source.verifiedOn}
+      </span>
+    </div>
   );
 }
 

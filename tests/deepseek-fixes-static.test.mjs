@@ -23,3 +23,17 @@ test("case review exposes the one-click demo, interactive ask, live claim warnin
   assert.match(source, /claimWarning/);
   assert.match(source, /generateReport\(nextComparisons, nextCalculations\)/);
 });
+
+test("resource-backed flow exposes source links, PI formulas, and avoids canned comparison fallback", async () => {
+  const caseReview = await read("src/app/case-review/page.tsx");
+  const compareRoute = await read("src/app/api/statements/compare/route.ts");
+  const sourceData = await read("src/data/official-sources(actual).ts");
+
+  assert.match(caseReview, /SourceReference/);
+  assert.match(caseReview, /source\.url/);
+  assert.match(caseReview, /calculation\.formula/);
+  assert.match(compareRoute, /compareStatementsDeterministically/);
+  assert.doesNotMatch(compareRoute, /DEMO_COMPARISONS/);
+  assert.match(sourceData, /sourceUrl/);
+  assert.match(sourceData, /verifiedOn/);
+});
