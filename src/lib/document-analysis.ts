@@ -79,16 +79,19 @@ function realValueAtMaturity(value: number | null, years: number | null, inflati
   return value / Math.pow(1 + inflation, years);
 }
 
-function estimateBreakeven(facts: PolicyFact[]) {
+function estimateBreakeven(
+  facts: PolicyFact[],
+  mode: "guaranteed" | "projected" = "guaranteed"
+) {
   const annualPremium = numberFromFact(factById(facts, "annual-premium"));
   if (!annualPremium) return null;
   const points = [
-    { year: 5, fact: factById(facts, "surrender-value-yr5", "projected-surrender-yr5") },
-    { year: 10, fact: factById(facts, "surrender-value-yr10", "projected-surrender-yr10") },
-    { year: 15, fact: factById(facts, "surrender-value-yr15", "projected-surrender-yr15") },
-    { year: 20, fact: factById(facts, "surrender-value-yr20", "projected-surrender-yr20") },
-    { year: 25, fact: factById(facts, "surrender-value-yr25", "projected-surrender-yr25") },
-    { year: 30, fact: factById(facts, "surrender-value-yr30", "projected-surrender-yr30") },
+    { year: 5, fact: factById(facts, mode === "guaranteed" ? "surrender-value-yr5" : "projected-surrender-yr5") },
+    { year: 10, fact: factById(facts, mode === "guaranteed" ? "surrender-value-yr10" : "projected-surrender-yr10") },
+    { year: 15, fact: factById(facts, mode === "guaranteed" ? "surrender-value-yr15" : "projected-surrender-yr15") },
+    { year: 20, fact: factById(facts, mode === "guaranteed" ? "surrender-value-yr20" : "projected-surrender-yr20") },
+    { year: 25, fact: factById(facts, mode === "guaranteed" ? "surrender-value-yr25" : "projected-surrender-yr25") },
+    { year: 30, fact: factById(facts, mode === "guaranteed" ? "surrender-value-yr30" : "projected-surrender-yr30") },
   ]
     .map((point) => ({
       year: point.year,
@@ -99,7 +102,10 @@ function estimateBreakeven(facts: PolicyFact[]) {
 
   const first = points.find((point) => point.value >= annualPremium * point.year);
   if (!first) return points.length ? { label: "Not shown in available rows", point: points[points.length - 1] } : null;
-  return { label: `Around year ${first.year}`, point: first };
+  return {
+    label: mode === "projected" ? `By year ${first.year} on projected values` : `Around year ${first.year}`,
+    point: first,
+  };
 }
 
 function buildSummary(facts: PolicyFact[]): DocumentAnalysisMetric[] {
@@ -108,7 +114,8 @@ function buildSummary(facts: PolicyFact[]): DocumentAnalysisMetric[] {
   const policyTerm = yearsFromFact(factById(facts, "policy-term"));
   const sumAssured = numberFromFact(factById(facts, "sum-assured", "death-benefit"));
   const costRatio = distributionCostRatio(facts);
-  const breakeven = estimateBreakeven(facts);
+  const guaranteedBreakeven = estimateBreakeven(facts);
+  const projectedBreakeven = estimateBreakeven(facts, "projected");
   const projectedMaturity = numberFromFact(
     factById(facts, "projected-surrender-yr20", "projected-surrender-yr25", "projected-surrender-yr30")
   );
@@ -132,8 +139,12 @@ function buildSummary(facts: PolicyFact[]): DocumentAnalysisMetric[] {
     },
     {
       label: "Breakeven",
-      value: breakeven?.label ?? "not enough surrender data",
-      note: "Breakeven means the first extracted row where surrender value is at least premiums paid to date.",
+      value:
+        guaranteedBreakeven?.label === "Not shown in available rows" && projectedBreakeven
+          ? `${projectedBreakeven.label}; guaranteed breakeven not shown`
+          : guaranteedBreakeven?.label ?? projectedBreakeven?.label ?? "not enough surrender data",
+      note:
+        "Breakeven means the first extracted row where surrender value is at least premiums paid to date. Projected rows are not guaranteed.",
     },
     {
       label: "Projected value in today's dollars",
@@ -148,7 +159,8 @@ function buildSections(facts: PolicyFact[]): DocumentAnalysisSection[] {
   const annualPremium = numberFromFact(factById(facts, "annual-premium"));
   const premiumTerm = yearsFromFact(factById(facts, "premium-term"));
   const costRatio = distributionCostRatio(facts);
-  const breakeven = estimateBreakeven(facts);
+  const guaranteedBreakeven = estimateBreakeven(facts);
+  const projectedBreakeven = estimateBreakeven(facts, "projected");
   const distributionFacts = factsByIds(facts, "distribution-cost", "distribution-cost-notice");
   const surrenderFacts = factsByIds(
     facts,
@@ -184,8 +196,10 @@ function buildSections(facts: PolicyFact[]): DocumentAnalysisSection[] {
       body:
         type === "term"
           ? "This appears to behave like a term-style product: no surrender value is expected by design. The key question is coverage duration, renewability, exclusions, and premium sustainability."
-          : breakeven
-            ? `The extracted surrender data suggests breakeven ${breakeven.label.toLowerCase()}. Before that point, stopping the policy may return less than premiums paid, depending on the actual surrender table.`
+          : guaranteedBreakeven?.label === "Not shown in available rows" && projectedBreakeven
+            ? `The extracted projected row suggests breakeven ${projectedBreakeven.label.toLowerCase()}, while guaranteed breakeven is not shown in the available guaranteed rows. Before relying on that projected position, ask which assumptions drive the non-guaranteed value.`
+            : guaranteedBreakeven
+            ? `The extracted surrender data suggests breakeven ${guaranteedBreakeven.label.toLowerCase()}. Before that point, stopping the policy may return less than premiums paid, depending on the actual surrender table.`
             : "Claro did not extract enough surrender rows to compute breakeven. This is one of the most important tables to ask the adviser to walk through.",
       facts: surrenderFacts,
     },
@@ -205,7 +219,8 @@ function buildSustainabilityQuestions(facts: PolicyFact[]): string[] {
   const premiumTerm = yearsFromFact(factById(facts, "premium-term"));
   const sumAssured = numberFromFact(factById(facts, "sum-assured", "death-benefit"));
   const costRatio = distributionCostRatio(facts);
-  const breakeven = estimateBreakeven(facts);
+  const guaranteedBreakeven = estimateBreakeven(facts);
+  const projectedBreakeven = estimateBreakeven(facts, "projected");
 
   return [
     annualPremium
@@ -220,8 +235,10 @@ function buildSustainabilityQuestions(facts: PolicyFact[]): string[] {
     costRatio
       ? `Do you understand that ${money(costRatio.distributionCost)} is disclosed as distribution cost within the policy economics?`
       : "Can your adviser show the Total Distribution Cost table and explain whether riders are included?",
-    breakeven
-      ? `Are you comfortable waiting until ${breakeven.label.toLowerCase()} before extracted surrender values appear to catch up with premiums paid?`
+    guaranteedBreakeven?.label === "Not shown in available rows" && projectedBreakeven
+      ? `Can your adviser explain why projected values appear to catch up ${projectedBreakeven.label.toLowerCase()}, while guaranteed breakeven is not shown in the available rows?`
+      : guaranteedBreakeven
+      ? `Are you comfortable waiting until ${guaranteedBreakeven.label.toLowerCase()} before extracted surrender values appear to catch up with premiums paid?`
       : "Can your adviser show the surrender table row where surrender value first meets premiums paid?",
   ];
 }

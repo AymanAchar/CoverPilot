@@ -184,6 +184,19 @@ export function runCalculations(facts: PolicyFact[]): CalculationCard[] {
     const sv = toNumber(projSvYr20) ?? 0;
     const diff = sv - totalPaid;
     cards.push({
+      id: "calc-projected-breakeven-signal",
+      title: "Estimated Projected Breakeven Signal",
+      formula:
+        "Projected Surrender Value (Yr 20) compared against Annual Premium × Premium Term",
+      result:
+        diff >= 0
+          ? `Projected values catch up by year 20, with ${money(diff)} above total premiums paid`
+          : `Projected values are still ${money(Math.abs(diff))} below total premiums paid at year 20`,
+      inputs: [annualPremium, premiumTerm, projSvYr20],
+      caveat:
+        "This uses projected non-guaranteed values. It should be read as a scenario signal, not a guaranteed breakeven point or a recommendation.",
+    });
+    cards.push({
       id: "calc-breakeven-projected",
       title: "Projected (Non-Guaranteed) Position at Year 20",
       formula:

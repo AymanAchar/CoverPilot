@@ -80,6 +80,7 @@ test("policy extraction has deterministic fallback when OpenAI fails", async () 
 test("decode route shows ClearFA-level analysis, not only extracted facts", async () => {
   const decodePage = await read("src/app/(workspace)/decode/page.tsx");
   const documentAnalysis = await read("src/lib/document-analysis.ts");
+  const calculations = await read("src/lib/calculations.ts");
   const extract = await read("src/lib/extract.ts");
 
   assert.match(decodePage, /buildDocumentAnalysis/);
@@ -89,6 +90,8 @@ test("decode route shows ClearFA-level analysis, not only extracted facts", asyn
   assert.match(documentAnalysis, /distributionCostRatio/);
   assert.match(documentAnalysis, /realValueAtMaturity/);
   assert.match(documentAnalysis, /sustainabilityQuestions/);
+  assert.match(documentAnalysis, /projectedBreakeven/);
+  assert.match(calculations, /Estimated Projected Breakeven Signal/);
   assert.match(extract, /surrender-value-yr20/);
   assert.match(extract, /projected-surrender-yr20/);
 });
