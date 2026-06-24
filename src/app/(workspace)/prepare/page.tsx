@@ -7,7 +7,6 @@ import type {
   SourceComparison,
   UserStatement,
 } from "@/types";
-import { SEEDED_FACTS, SEEDED_STATEMENTS } from "@/data/seeded-policy";
 import Link from "next/link";
 import {
   createCaseEvent,
@@ -31,9 +30,9 @@ export default function PreparePage() {
   const [report, setReport] = useState<ReportResponse["report"] | null>(null);
   const [loadingStep, setLoadingStep] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [facts] = useState(() => policyWorkspace?.facts ?? SEEDED_FACTS);
+  const [facts] = useState(() => policyWorkspace?.facts ?? []);
   const [statements] = useState<UserStatement[]>(
-    () => checkWorkspace?.statements ?? SEEDED_STATEMENTS
+    () => checkWorkspace?.statements ?? []
   );
   const [policySource] = useState<PolicyWorkspaceSource>(
     () => policyWorkspace?.source ?? "sample"
@@ -117,8 +116,8 @@ export default function PreparePage() {
           <Link href="/" className="text-slate-400 hover:text-white text-sm">
             ← Home
           </Link>
-          <Link href="/case-review" className="text-slate-400 hover:text-white text-sm">
-            Case Review
+          <Link href="/check" className="text-slate-400 hover:text-white text-sm">
+            Check
           </Link>
           <Link href="/my-case" className="text-slate-400 hover:text-white text-sm">
             My Case
@@ -140,17 +139,45 @@ export default function PreparePage() {
           <p className="text-slate-500 text-xs mt-1">
             {savedComparisons && savedCalculations
               ? "Using the latest statement checks from the Check page."
-              : "No saved statement checks found. Prepare will run the sample statements before generating the report."}
+              : "No saved statement checks found yet. Run Check first to prepare a meeting pack."}
             {" "}
             {policySource === "uploaded"
               ? "Policy facts came from an uploaded PDF."
               : policySource === "sample-fallback"
                 ? "Policy facts are sample fallback data."
-                : "Policy facts are from the sample policy."}
+                : facts.length > 0
+                  ? "Using saved document facts from this browser."
+                  : "No financial document loaded yet."}
           </p>
         </div>
 
-        {!report && (
+        {!report && (facts.length === 0 || statements.length === 0) && (
+          <div className="rounded-lg border border-slate-800 bg-slate-900 p-5">
+            <p className="text-sm font-medium text-slate-200">
+              Prepare needs a document and at least one checked adviser claim.
+            </p>
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              This page should not invent a sample meeting pack before you have
+              added your own material.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <Link
+                href="/decode"
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500"
+              >
+                Understand a document
+              </Link>
+              <Link
+                href="/check"
+                className="rounded-lg border border-slate-700 bg-slate-950 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-800"
+              >
+                Check what my adviser said
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {!report && facts.length > 0 && statements.length > 0 && (
           <div className="space-y-4">
             <button
               onClick={generateReport}

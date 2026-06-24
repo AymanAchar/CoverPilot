@@ -8,7 +8,7 @@ import type {
   PolicyFact,
   UserStatement,
 } from "@/types";
-import { SEEDED_FACTS, SEEDED_STATEMENTS } from "@/data/seeded-policy";
+import { SEEDED_STATEMENTS } from "@/data/seeded-policy";
 import Link from "next/link";
 import { checkCompliance } from "@/lib/compliance";
 import {
@@ -56,7 +56,7 @@ const EXAMPLE_CLAIMS = [
 
 export default function CheckPage() {
   const [policyWorkspace] = useState(() => loadPolicyWorkspace());
-  const [facts] = useState<PolicyFact[]>(() => policyWorkspace?.facts ?? SEEDED_FACTS);
+  const [facts] = useState<PolicyFact[]>(() => policyWorkspace?.facts ?? []);
   const [policySource] = useState<PolicyWorkspaceSource>(
     () => policyWorkspace?.source ?? "sample"
   );
@@ -161,8 +161,8 @@ export default function CheckPage() {
           <Link href="/" className="text-slate-400 hover:text-white text-sm">
             ← Home
           </Link>
-          <Link href="/case-review" className="text-slate-400 hover:text-white text-sm">
-            Case Review
+          <Link href="/decode" className="text-slate-400 hover:text-white text-sm">
+            Decode
           </Link>
           <Link href="/my-case" className="text-slate-400 hover:text-white text-sm">
             My Case
@@ -180,14 +180,18 @@ export default function CheckPage() {
 
         <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
           <p className="text-slate-300 text-sm font-medium">
-            Active policy: {facts.length} facts loaded
+            {facts.length > 0
+              ? `Active document: ${facts.length} facts loaded`
+              : "No financial document loaded yet"}
           </p>
           <p className="text-slate-500 text-xs mt-1">
             {policySource === "uploaded"
               ? "Using facts extracted from the uploaded policy in Decode."
               : policySource === "sample-fallback"
                 ? "Using sample facts because the uploaded PDF could not be extracted reliably."
-                : "Using the sample policy. Decode a policy first to run this check on uploaded facts."}
+                : facts.length > 0
+                  ? "Using saved document facts from this browser."
+                  : "You can check a claim with public guidance first, or decode a document to compare against your own figures."}
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <Link

@@ -107,8 +107,8 @@ export default function DecodePage() {
           ← Home
         </Link>
         <div className="flex gap-4 text-sm">
-          <Link href="/case-review" className="text-slate-400 hover:text-white">
-            Case Review
+          <Link href="/check" className="text-slate-400 hover:text-white">
+            Check
           </Link>
           <Link href="/my-case" className="text-slate-400 hover:text-white">
             My Case
@@ -116,27 +116,15 @@ export default function DecodePage() {
         </div>
 
         <div>
-          <h1 className="text-2xl font-bold">📄 Decode</h1>
+          <h1 className="text-2xl font-bold">Understand a financial document</h1>
           <p className="text-slate-400 mt-1">
-            Extract structured facts from a policy document.
+            Upload a policy illustration or financial document to extract the
+            figures you want to understand.
           </p>
         </div>
 
         {!facts && !loadingStep && (
           <div className="space-y-3">
-            <button
-              onClick={loadSeeded}
-              className="bg-blue-600 hover:bg-blue-500 text-white font-medium px-5 py-2.5 rounded-lg transition-colors"
-            >
-              Use sample policy
-            </button>
-
-            <div className="flex items-center gap-3 text-slate-500 text-sm">
-              <span className="flex-1 h-px bg-slate-800" />
-              or
-              <span className="flex-1 h-px bg-slate-800" />
-            </div>
-
             <input
               ref={fileRef}
               type="file"
@@ -146,9 +134,16 @@ export default function DecodePage() {
             />
             <button
               onClick={() => fileRef.current?.click()}
-              className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-medium px-5 py-2.5 rounded-lg transition-colors"
+              className="bg-blue-600 hover:bg-blue-500 text-white font-medium px-5 py-2.5 rounded-lg transition-colors"
             >
-              Upload my own policy (PDF)
+              Upload PDF
+            </button>
+
+            <button
+              onClick={loadSeeded}
+              className="block text-slate-500 hover:text-slate-300 text-xs underline underline-offset-4"
+            >
+              Try with a sample policy
             </button>
 
             <p className="text-slate-500 text-xs">

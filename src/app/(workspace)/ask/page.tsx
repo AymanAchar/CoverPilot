@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useState } from "react";
 import type { FinancialQuestionResponse, PolicyFact } from "@/types";
-import { SEEDED_FACTS } from "@/data/seeded-policy";
 import {
   createCaseEvent,
   loadPolicyWorkspace,
@@ -26,7 +25,7 @@ const LOADING_STEPS = [
 
 export default function AskPage() {
   const [policyWorkspace] = useState(() => loadPolicyWorkspace());
-  const [facts] = useState<PolicyFact[]>(() => policyWorkspace?.facts ?? SEEDED_FACTS);
+  const [facts] = useState<PolicyFact[]>(() => policyWorkspace?.facts ?? []);
   const [policySource] = useState<PolicyWorkspaceSource>(
     () => policyWorkspace?.source ?? "sample"
   );
@@ -120,7 +119,9 @@ export default function AskPage() {
               ? "Using facts extracted from your uploaded document."
               : policySource === "sample-fallback"
                 ? "Using sample facts because upload extraction fell back."
-                : "Using sample policy facts. Decode your own document to personalise the context."}
+                : facts.length > 0
+                  ? "Using saved document facts from this browser."
+                  : "No document loaded. Answers will use public guidance until you decode a document."}
           </p>
         </div>
 

@@ -48,8 +48,8 @@ export default function MyCasePage() {
           <Link href="/" className="font-display text-xl font-light">
             CoverPilot
           </Link>
-          <Link href="/case-review" className="text-sm text-[#777169] hover:text-black">
-            Case Review
+          <Link href="/check" className="text-sm text-[#777169] hover:text-black">
+            Check
           </Link>
         </div>
       </header>
@@ -65,11 +65,11 @@ export default function MyCasePage() {
             No evidence workspace yet.
           </h1>
           <p className="mx-auto mt-4 max-w-[560px] text-base leading-7 text-[#777169]">
-            Start a case review to save policy facts, adviser claims,
-            calculations, and meeting-prep questions in one place.
+            Start with one focused flow to save policy facts, adviser claims,
+            calculations, and meeting-prep questions here.
           </p>
-          <Link href="/case-review" className="primary-button mt-8">
-            Start case review
+          <Link href="/check" className="primary-button mt-8">
+            Start with adviser check
           </Link>
         </section>
       ) : (
@@ -86,8 +86,8 @@ export default function MyCasePage() {
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Link href="/case-review" className="primary-button">
-                Continue review
+              <Link href="/check" className="primary-button">
+                Continue checking
               </Link>
               <button onClick={clearCase} className="secondary-button">
                 Clear case
