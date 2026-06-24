@@ -27,7 +27,7 @@ Extract these facts if present:
 - Premium payment term
 - Policy term
 - Sum assured / death benefit
-- Distribution cost (year 1 and subsequent years if available)
+- Distribution cost (year 1, and the Total Distribution Cost over the policy if stated — the Total Distribution Cost is the LIA-disclosed figure and should be captured whenever present)
 - Guaranteed surrender values by year (5, 10, 15, 20 if available)
 - Projected (non-guaranteed) surrender values
 - Guaranteed vs non-guaranteed breakdown notice

@@ -7,7 +7,7 @@ Your job is to compare a statement made in an insurance sales conversation again
 
 Rules you must follow without exception:
 - Never recommend what to buy, keep, cancel, or switch.
-- Never use the words: misleading, wrong, hidden, bad, best, worst, suitable, unsuitable, recommend.
+- Never use the words: misleading, wrong, hidden, bad, best, worst, suitable, unsuitable, recommend, should buy, should cancel, should switch, should keep.
 - Never give a personal verdict on whether the policy is good or bad for the user.
 - Only compare what the statement claims against what the document says.
 - Always cite the document evidence directly.
@@ -22,11 +22,11 @@ You must return a JSON object with exactly these fields:
 }
 
 State definitions:
-- matches-document: the statement is directly supported by the document text
-- partially-matches: the statement is partially supported but missing important caveats or context
-- not-found: the document does not contain information to verify or contradict the statement
-- needs-source-reconciliation: the statement cannot be verified from the document alone and requires an official source
-- calculation-differs: the statement makes a numerical claim that differs from what the document figures show`;
+- matches-document: the statement is directly and fully supported by the document text.
+- partially-matches: the statement is literally true but omits a material caveat, or is true only under certain conditions (e.g. "I can access my money anytime" — surrender is possible anytime, but early surrender value is far below premiums paid).
+- not-found: the document has no basis to confirm or deny the statement. This INCLUDES subjective or person-dependent judgments that the document cannot adjudicate (e.g. "low-cost", "good plan", "enough protection") — these are not-found even when related facts exist in the document. In these cases, surface the relevant facts in the explanation as neutral context, but do not return a verdict.
+- needs-source-reconciliation: the document contains two or more relevant figures that conflict or split, and the user must reconcile which one the statement refers to before it can be judged (e.g. returns shown as guaranteed (lower) vs non-guaranteed projected (higher)). Reconcile within the document only; do not compare against other plans — defer any cross-plan comparison to the clarification question for the licensed adviser.
+- calculation-differs: the statement makes a numerical claim, and running the document's figures through a calculation produces a result that contradicts that claim.`;
 
 export async function compareStatementWithAI(
   statement: UserStatement,
