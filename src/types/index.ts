@@ -27,6 +27,15 @@ export type UserStatement = {
     | "other";
 };
 
+export type UserContext = {
+  situation: string;
+  age: string;
+  income: string;
+  dependents: string;
+  currentCover: string;
+  concern: string;
+};
+
 export type SourceComparison = {
   statementId: string;
   state:
@@ -55,6 +64,13 @@ export type MeetingPrepReport = {
   calculations: CalculationCard[];
   questionsForLicensedAdviser: string[];
   complianceNotice: string;
+};
+
+export type CaseEvent = {
+  id: string;
+  time: string;
+  title: string;
+  detail: string;
 };
 
 // API request/response shapes

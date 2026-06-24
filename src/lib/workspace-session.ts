@@ -1,7 +1,10 @@
 import type {
   CalculationCard,
+  CaseEvent,
+  MeetingPrepReport,
   PolicyFact,
   SourceComparison,
+  UserContext,
   UserStatement,
 } from "@/types";
 
@@ -20,8 +23,66 @@ export type CheckWorkspace = {
   savedAt: string;
 };
 
+export type CaseWorkspace = {
+  id: string;
+  context: UserContext;
+  facts: PolicyFact[];
+  factsSource: PolicyWorkspaceSource;
+  statements: UserStatement[];
+  comparisons: SourceComparison[];
+  calculations: CalculationCard[];
+  report: MeetingPrepReport | null;
+  events: CaseEvent[];
+  updatedAt: string;
+};
+
 const POLICY_KEY = "coverpilot_policy_workspace";
 const CHECK_KEY = "coverpilot_check_workspace";
+const CASE_KEY = "coverpilot_case_workspace";
+
+export const DEFAULT_USER_CONTEXT: UserContext = {
+  situation: "FA meeting tomorrow",
+  age: "25",
+  income: "S$4,000/month",
+  dependents: "No dependents declared",
+  currentCover: "Basic employer coverage",
+  concern: "I want to know what the policy document supports before deciding what to ask.",
+};
+
+export function createCaseEvent(title: string, detail: string): CaseEvent {
+  return {
+    id: `event-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    time: new Date().toLocaleTimeString("en-SG", {
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+    title,
+    detail,
+  };
+}
+
+export function createEmptyCaseWorkspace(): CaseWorkspace {
+  return {
+    id: `CP-${new Date().getFullYear()}-${Math.random()
+      .toString(36)
+      .slice(2, 7)
+      .toUpperCase()}`,
+    context: DEFAULT_USER_CONTEXT,
+    facts: [],
+    factsSource: "sample",
+    statements: [],
+    comparisons: [],
+    calculations: [],
+    report: null,
+    events: [
+      createCaseEvent(
+        "Case opened",
+        "A new insurance evidence workspace was created."
+      ),
+    ],
+    updatedAt: new Date().toISOString(),
+  };
+}
 
 function canUseSessionStorage() {
   return typeof window !== "undefined" && typeof window.sessionStorage !== "undefined";
@@ -92,4 +153,43 @@ export function loadCheckWorkspace(): CheckWorkspace | null {
   } catch {
     return null;
   }
+}
+
+export function saveCaseWorkspace(workspace: CaseWorkspace) {
+  if (!canUseSessionStorage()) return;
+  window.sessionStorage.setItem(
+    CASE_KEY,
+    JSON.stringify({ ...workspace, updatedAt: new Date().toISOString() })
+  );
+}
+
+export function loadCaseWorkspace(): CaseWorkspace | null {
+  if (!canUseSessionStorage()) return null;
+  const raw = window.sessionStorage.getItem(CASE_KEY);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as CaseWorkspace;
+    if (!parsed.id || !parsed.context || !Array.isArray(parsed.events)) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+export function updateCaseWorkspace(
+  updater: (workspace: CaseWorkspace) => CaseWorkspace
+): CaseWorkspace {
+  const current = loadCaseWorkspace() ?? createEmptyCaseWorkspace();
+  const next = updater(current);
+  saveCaseWorkspace(next);
+  return { ...next, updatedAt: new Date().toISOString() };
+}
+
+export function clearCaseWorkspace() {
+  if (!canUseSessionStorage()) return;
+  window.sessionStorage.removeItem(CASE_KEY);
+  window.sessionStorage.removeItem(POLICY_KEY);
+  window.sessionStorage.removeItem(CHECK_KEY);
 }

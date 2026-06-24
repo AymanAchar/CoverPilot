@@ -10,8 +10,10 @@ import type {
 import { SEEDED_FACTS, SEEDED_STATEMENTS } from "@/data/seeded-policy";
 import Link from "next/link";
 import {
+  createCaseEvent,
   loadCheckWorkspace,
   loadPolicyWorkspace,
+  updateCaseWorkspace,
   type PolicyWorkspaceSource,
 } from "@/lib/workspace-session";
 
@@ -83,6 +85,22 @@ export default function PreparePage() {
       });
       if (!reportRes.ok) throw new Error("Report generation failed. Please try again.");
       const reportData: ReportResponse = await reportRes.json();
+      updateCaseWorkspace((current) => ({
+        ...current,
+        facts,
+        factsSource: policySource,
+        statements,
+        comparisons: comparisons ?? [],
+        calculations: calculations ?? [],
+        report: reportData.report,
+        events: [
+          ...current.events,
+          createCaseEvent(
+            "Meeting pack prepared",
+            `${reportData.report.questionsForLicensedAdviser.length} questions were saved from the Prepare page.`
+          ),
+        ],
+      }));
       setReport(reportData.report);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
@@ -98,6 +116,12 @@ export default function PreparePage() {
         <div className="flex items-center gap-3">
           <Link href="/" className="text-slate-400 hover:text-white text-sm">
             ← Home
+          </Link>
+          <Link href="/case-review" className="text-slate-400 hover:text-white text-sm">
+            Case Review
+          </Link>
+          <Link href="/my-case" className="text-slate-400 hover:text-white text-sm">
+            My Case
           </Link>
         </div>
 

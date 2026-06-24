@@ -5,7 +5,9 @@ import type { PolicyFact } from "@/types";
 import Link from "next/link";
 import {
   clearPolicyWorkspace,
+  createCaseEvent,
   savePolicyWorkspace,
+  updateCaseWorkspace,
   type PolicyWorkspaceSource,
 } from "@/lib/workspace-session";
 
@@ -74,6 +76,21 @@ export default function DecodePage() {
 
       if (data.fallback) setUsedFallback(true);
       savePolicyWorkspace(data.facts, source);
+      updateCaseWorkspace((current) => ({
+        ...current,
+        facts: data.facts,
+        factsSource: source,
+        comparisons: [],
+        calculations: [],
+        report: null,
+        events: [
+          ...current.events,
+          createCaseEvent(
+            "Policy facts loaded",
+            `${data.facts.length} facts were saved from the Decode page.`
+          ),
+        ],
+      }));
       setFacts(data.facts);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
@@ -89,6 +106,14 @@ export default function DecodePage() {
         <Link href="/" className="text-slate-400 hover:text-white text-sm">
           ← Home
         </Link>
+        <div className="flex gap-4 text-sm">
+          <Link href="/case-review" className="text-slate-400 hover:text-white">
+            Case Review
+          </Link>
+          <Link href="/my-case" className="text-slate-400 hover:text-white">
+            My Case
+          </Link>
+        </div>
 
         <div>
           <h1 className="text-2xl font-bold">📄 Decode</h1>

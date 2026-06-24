@@ -11,8 +11,10 @@ import type {
 import { SEEDED_FACTS, SEEDED_STATEMENTS } from "@/data/seeded-policy";
 import Link from "next/link";
 import {
+  createCaseEvent,
   loadPolicyWorkspace,
   saveCheckWorkspace,
+  updateCaseWorkspace,
   type PolicyWorkspaceSource,
 } from "@/lib/workspace-session";
 
@@ -73,6 +75,22 @@ export default function CheckPage() {
       const data: CompareResponse = await res.json();
       if (!data.blocked) {
         saveCheckWorkspace(statements, data.comparisons, data.calculations);
+        updateCaseWorkspace((current) => ({
+          ...current,
+          facts,
+          factsSource: policySource,
+          statements,
+          comparisons: data.comparisons,
+          calculations: data.calculations,
+          report: null,
+          events: [
+            ...current.events,
+            createCaseEvent(
+              "Evidence review generated",
+              `${data.comparisons.length} claims were checked from the Check page.`
+            ),
+          ],
+        }));
       }
       setResult(data);
     } catch (e) {
@@ -98,6 +116,12 @@ export default function CheckPage() {
         <div className="flex items-center gap-3">
           <Link href="/" className="text-slate-400 hover:text-white text-sm">
             ← Home
+          </Link>
+          <Link href="/case-review" className="text-slate-400 hover:text-white text-sm">
+            Case Review
+          </Link>
+          <Link href="/my-case" className="text-slate-400 hover:text-white text-sm">
+            My Case
           </Link>
         </div>
 

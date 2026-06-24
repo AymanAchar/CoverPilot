@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { ExtractResponse } from "@/types";
 import { SEEDED_FACTS, SEEDED_POLICY_ID } from "@/data/seeded-policy";
-import { extractFactsFromPDF } from "@/lib/extract";
 
 // POST /api/policy/extract
 // Body: JSON { mode: "seeded" } OR multipart/form-data with a "file" field (PDF)
@@ -32,6 +31,7 @@ export async function POST(req: NextRequest) {
       }
 
       const buffer = Buffer.from(await file.arrayBuffer());
+      const { extractFactsFromPDF } = await import("@/lib/extract");
       const facts = await extractFactsFromPDF(buffer);
 
       // Fallback to seeded if extraction returns nothing useful
