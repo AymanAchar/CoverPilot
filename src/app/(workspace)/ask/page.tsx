@@ -33,6 +33,7 @@ export default function AskPage() {
   const [answer, setAnswer] = useState<FinancialQuestionResponse | null>(null);
   const [loadingStep, setLoadingStep] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [useDocumentContext, setUseDocumentContext] = useState(false);
 
   async function askQuestion(nextQuestion = question) {
     if (!nextQuestion.trim()) {
@@ -54,15 +55,18 @@ export default function AskPage() {
       const res = await fetch("/api/questions/answer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: nextQuestion, facts }),
+        body: JSON.stringify({
+          question: nextQuestion,
+          facts: useDocumentContext ? facts : [],
+        }),
       });
       if (!res.ok) throw new Error("Could not answer that question yet.");
       const data: FinancialQuestionResponse = await res.json();
       if (!data.blocked) {
         updateCaseWorkspace((current) => ({
           ...current,
-          facts,
-          factsSource: policySource,
+          facts: useDocumentContext ? facts : current.facts,
+          factsSource: useDocumentContext ? policySource : current.factsSource,
           events: [
             ...current.events,
             createCaseEvent(
@@ -105,13 +109,13 @@ export default function AskPage() {
             </div>
             <p className="cp-route-copy">
             Ask about Singapore insurance or financial-advisory concepts.
-            CoverPilot answers with policy context, public guidance, and
-            questions for a licensed adviser.
+            CoverPilot answers in plain English with public guidance and
+            questions you can bring to a licensed adviser.
           </p>
             <div className="cp-empty">
               {facts.length > 0
-                ? `${facts.length} document facts can be used as context.`
-                : "No document loaded. Answers will use public guidance until you decode a document."}
+                ? `${facts.length} document facts are available if you choose to use them.`
+                : "No document loaded. General answers will use public guidance only."}
             </div>
           </section>
 
@@ -131,6 +135,20 @@ export default function AskPage() {
             rows={5}
                 className="cp-input"
           />
+
+              {facts.length > 0 && (
+                <label className="flex items-start gap-3 text-sm leading-6 text-[var(--muted)]">
+                  <input
+                    type="checkbox"
+                    checked={useDocumentContext}
+                    onChange={(event) => setUseDocumentContext(event.target.checked)}
+                    className="mt-1"
+                  />
+                  <span>
+                    Use my loaded document as context for this question.
+                  </span>
+                </label>
+              )}
 
               <div className="cp-chip-row">
             {EXAMPLE_QUESTIONS.map((example) => (
@@ -178,49 +196,30 @@ export default function AskPage() {
 
         {answer && !answer.blocked && (
           <div className="space-y-5">
-                <div className="cp-panel cp-panel-pad">
-                  <p className="cp-source-label">
-                Routed topic
-              </p>
+            <div className="cp-panel cp-panel-pad">
+              <p className="cp-source-label">Answer</p>
               <h2 className="mt-2 text-lg font-semibold">{answer.topic}</h2>
-                  <div className="mt-4 space-y-3 text-sm leading-6 text-[var(--muted)]">
+              <div className="mt-4 space-y-3 text-sm leading-6 text-[var(--muted)]">
                 {answer.answer?.map((paragraph) => (
                   <p key={paragraph}>{paragraph}</p>
                 ))}
               </div>
             </div>
 
-            {!!answer.sourceFacts?.length && (
+            {!!answer.officialSourceFacts?.length && (
               <div className="space-y-3">
-                <h2 className="text-lg font-semibold">Sources used</h2>
-                {answer.sourceFacts.map((fact) => (
-                  <div
-                    key={fact.id}
-                        className="cp-source"
-                  >
-                    <div className="mb-2 flex items-center justify-between gap-3">
-                      <p className="font-medium">{fact.label}</p>
-                          <span className="cp-status">
-                        {fact.sourceType === "official-source"
-                          ? fact.sourceName
-                          : "Policy"}
-                      </span>
-                    </div>
-                        <blockquote>
-                      {fact.quote ?? String(fact.value)}
-                      {fact.page ? ` (p.${fact.page})` : ""}
-                    </blockquote>
-                    {fact.sourceUrl && (
-                      <a
-                        href={fact.sourceUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                            className="cp-quiet-link mt-2 inline-block"
-                      >
-                        View source
-                      </a>
-                    )}
-                  </div>
+                <h2 className="text-lg font-semibold">Public sources used</h2>
+                {answer.officialSourceFacts.map((fact) => (
+                  <SourceFact key={fact.id} fact={fact} />
+                ))}
+              </div>
+            )}
+
+            {!!answer.documentSourceFacts?.length && (
+              <div className="space-y-3">
+                <h2 className="text-lg font-semibold">Your document context</h2>
+                {answer.documentSourceFacts.map((fact) => (
+                  <SourceFact key={fact.id} fact={fact} />
                 ))}
               </div>
             )}
@@ -261,5 +260,34 @@ export default function AskPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+function SourceFact({ fact }: { fact: PolicyFact }) {
+  return (
+    <div className="cp-source">
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <p className="font-medium">{fact.label}</p>
+        <span className="cp-status">
+          {fact.sourceType === "official-source"
+            ? fact.sourceName
+            : "Policy"}
+        </span>
+      </div>
+      <blockquote>
+        {fact.quote ?? String(fact.value)}
+        {fact.page ? ` (p.${fact.page})` : ""}
+      </blockquote>
+      {fact.sourceUrl && (
+        <a
+          href={fact.sourceUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="cp-quiet-link mt-2 inline-block"
+        >
+          View source
+        </a>
+      )}
+    </div>
   );
 }

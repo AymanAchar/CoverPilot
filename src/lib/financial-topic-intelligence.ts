@@ -178,7 +178,7 @@ export function policyFactsForTopic(
   const selected = topic.policyFactIds
     .map((id) => facts.find((fact) => fact.id === id))
     .filter(Boolean) as PolicyFact[];
-  return selected.length > 0 ? selected : facts.slice(0, 4);
+  return selected;
 }
 
 export function splitFinancialClaims(input: string): UserStatement[] {

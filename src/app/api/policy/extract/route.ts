@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(
           {
             error:
-              "CoverPilot could not extract enough policy facts from this PDF. Please use a clearer policy illustration or enter the key figures manually.",
+              "CoverPilot could read the PDF, but could not extract enough policy facts. Try a clearer policy illustration PDF or use the sample policy for the demo.",
           },
           { status: 422 }
         );
@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error:
-            "CoverPilot could not read this PDF. Please use a clearer policy illustration or use the sample policy.",
+            "CoverPilot could not finish extracting this PDF. Check that OPENAI_API_KEY is set on Render and that the uploaded file is a text-readable policy illustration.",
         },
         { status: 500 }
       );

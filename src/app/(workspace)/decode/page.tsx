@@ -38,6 +38,15 @@ export default function DecodePage() {
     await extractFacts("upload", file);
   }
 
+  async function readUploadError(res: Response) {
+    try {
+      const data = (await res.json()) as { error?: string };
+      return data.error ?? "Could not read the document. Please try again.";
+    } catch {
+      return "Could not read the document. Please try again.";
+    }
+  }
+
   async function extractFacts(mode: "seeded" | "upload", file?: File) {
     setError(null);
     setFacts(null);
@@ -66,7 +75,7 @@ export default function DecodePage() {
         res = await fetch("/api/policy/extract", { method: "POST", body: form });
       }
 
-      if (!res.ok) throw new Error("Could not read the document. Please try again.");
+      if (!res.ok) throw new Error(await readUploadError(res));
       const data = await res.json();
       const source: PolicyWorkspaceSource = data.fallback
         ? "sample-fallback"

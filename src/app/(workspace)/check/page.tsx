@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type {
   CompareResponse,
   SourceComparison,
@@ -15,6 +15,7 @@ import {
   createCaseEvent,
   loadPolicyWorkspace,
   saveCheckWorkspace,
+  savePolicyWorkspace,
   updateCaseWorkspace,
   type PolicyWorkspaceSource,
 } from "@/lib/workspace-session";
@@ -48,20 +49,63 @@ const EXAMPLE_CLAIMS = [
 
 export default function CheckPage() {
   const [policyWorkspace] = useState(() => loadPolicyWorkspace());
-  const [facts] = useState<PolicyFact[]>(() => policyWorkspace?.facts ?? []);
-  const [policySource] = useState<PolicyWorkspaceSource>(
-    () => policyWorkspace?.source ?? "sample"
+  const [facts, setFacts] = useState<PolicyFact[]>(() => policyWorkspace?.facts ?? []);
+  const [policySource, setPolicySource] = useState<PolicyWorkspaceSource>(
+    () => policyWorkspace?.source ?? "uploaded"
   );
   const [statements, setStatements] = useState<UserStatement[]>([]);
   const [result, setResult] = useState<CompareResponse | null>(null);
   const [loadingStep, setLoadingStep] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [uploadingPolicy, setUploadingPolicy] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [claimInput, setClaimInput] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
   const compliance = checkCompliance(claimInput);
+
+  async function readUploadError(res: Response) {
+    try {
+      const data = (await res.json()) as { error?: string };
+      return data.error ?? "Could not read the policy illustration.";
+    } catch {
+      return "Could not read the policy illustration.";
+    }
+  }
+
+  async function uploadPolicy(file: File) {
+    if (file.type !== "application/pdf") {
+      setUploadError("Please upload a PDF policy illustration.");
+      return;
+    }
+
+    setUploadingPolicy(true);
+    setUploadError(null);
+
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/policy/extract", { method: "POST", body: form });
+      if (!res.ok) throw new Error(await readUploadError(res));
+      const data = (await res.json()) as { facts: PolicyFact[] };
+      setFacts(data.facts);
+      setPolicySource("uploaded");
+      savePolicyWorkspace(data.facts, "uploaded");
+      setResult(null);
+    } catch (e) {
+      setUploadError(e instanceof Error ? e.message : "Could not read the policy illustration.");
+    } finally {
+      setUploadingPolicy(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
 
   async function runCheck() {
     if (statements.length === 0) {
       setError("Add at least one checkable point first.");
+      return;
+    }
+    if (facts.length === 0) {
+      setError("Upload the related policy illustration before running a policy-specific check.");
       return;
     }
     setError(null);
@@ -179,20 +223,49 @@ export default function CheckPage() {
           </section>
 
           <section className="cp-stack">
+            <div className="cp-panel cp-panel-pad cp-stack">
+              <input
+                ref={fileRef}
+                type="file"
+                accept="application/pdf"
+                className="hidden"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) void uploadPolicy(file);
+                }}
+              />
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="cp-label">Policy illustration</p>
+                  <p className="mt-1 text-sm leading-6 text-[var(--muted)]">
+                    Attach the document behind the claim so CoverPilot can check
+                    policy-specific figures.
+                  </p>
+                </div>
+                <button
+                  onClick={() => fileRef.current?.click()}
+                  disabled={uploadingPolicy}
+                  className="secondary-button w-fit disabled:opacity-50"
+                >
+                  {uploadingPolicy ? "Reading..." : facts.length > 0 ? "Replace PDF" : "Upload PDF"}
+                </button>
+              </div>
+              <div className="cp-empty">
+                {facts.length > 0
+                  ? `${facts.length} document facts loaded for this policy-specific check.`
+                  : "No policy illustration attached yet. You can split the adviser claim first, but policy-specific checking needs the PDF."}
+              </div>
+              {uploadError && <div className="cp-error">{uploadError}</div>}
+            </div>
+
             <div className="cp-action-row">
-            <Link
-              href="/decode"
-                className="cp-quiet-link"
-            >
-              Upload or decode a document first
-            </Link>
-            <button
-              onClick={loadDemoClaims}
-                className="cp-quiet-link"
-            >
-              Use demo claims
-            </button>
-          </div>
+              <button onClick={loadDemoClaims} className="cp-quiet-link">
+                Use demo claims
+              </button>
+              <Link href="/decode" className="cp-quiet-link">
+                Decode a document separately
+              </Link>
+            </div>
 
             <div className="cp-panel cp-panel-pad cp-stack">
           <div>

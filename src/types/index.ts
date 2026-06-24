@@ -121,6 +121,8 @@ export type FinancialQuestionResponse = {
   topic?: string;
   answer?: string[];
   sourceFacts?: PolicyFact[];
+  officialSourceFacts?: PolicyFact[];
+  documentSourceFacts?: PolicyFact[];
   questionsForLicensedAdviser?: string[];
   relatedActions?: Array<{
     label: string;
