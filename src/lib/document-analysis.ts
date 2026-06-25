@@ -65,8 +65,10 @@ function distributionCostRatio(facts: PolicyFact[]) {
   const annualPremium = numberFromFact(factById(facts, "annual-premium"));
   const premiumTerm = yearsFromFact(factById(facts, "premium-term"));
   const distributionCost = numberFromFact(factById(facts, "distribution-cost"));
-  if (!annualPremium || !premiumTerm || !distributionCost) return null;
-  const totalPremiums = annualPremium * premiumTerm;
+  const totalPremiumsFact = numberFromFact(factById(facts, "total-premiums-paid-age85"));
+  if (!distributionCost) return null;
+  const totalPremiums = totalPremiumsFact ?? (annualPremium && premiumTerm ? annualPremium * premiumTerm : null);
+  if (!totalPremiums) return null;
   return {
     distributionCost,
     totalPremiums,
@@ -112,20 +114,39 @@ function buildSummary(facts: PolicyFact[]): DocumentAnalysisMetric[] {
   const annualPremium = numberFromFact(factById(facts, "annual-premium"));
   const premiumTerm = yearsFromFact(factById(facts, "premium-term"));
   const policyTerm = yearsFromFact(factById(facts, "policy-term"));
+  const totalPremiumsToAge85 = numberFromFact(factById(facts, "total-premiums-paid-age85"));
   const sumAssured = numberFromFact(factById(facts, "sum-assured", "death-benefit"));
   const costRatio = distributionCostRatio(facts);
   const guaranteedBreakeven = estimateBreakeven(facts);
   const projectedBreakeven = estimateBreakeven(facts, "projected");
   const projectedMaturity = numberFromFact(
-    factById(facts, "projected-surrender-yr20", "projected-surrender-yr25", "projected-surrender-yr30")
+    factById(
+      facts,
+      "projected-surrender-yr20",
+      "projected-surrender-yr25",
+      "projected-surrender-yr30",
+      "projected-surrender-yr60",
+      "projected-surrender-yr64"
+    )
   );
-  const realMaturity = realValueAtMaturity(projectedMaturity, policyTerm ?? premiumTerm ?? 20);
+  const projectionHorizon = factById(facts, "projected-surrender-yr20")
+    ? 20
+    : yearsFromFact(factById(facts, "projection-horizon-years"));
+  const realMaturity = realValueAtMaturity(projectedMaturity, projectionHorizon ?? policyTerm ?? premiumTerm ?? 20);
 
   return [
     {
       label: "Premium commitment",
-      value: annualPremium && premiumTerm ? `${money(annualPremium * premiumTerm)} over ${premiumTerm} years` : annualPremium ? `${money(annualPremium)} per year` : "not found",
-      note: "Computed from annual premium and premium payment term where available.",
+      value: totalPremiumsToAge85
+        ? `${money(totalPremiumsToAge85)} to age 85`
+        : annualPremium && premiumTerm
+          ? `${money(annualPremium * premiumTerm)} over ${premiumTerm} years`
+          : annualPremium
+            ? `${money(annualPremium)} per year`
+            : "not found",
+      note: totalPremiumsToAge85
+        ? "Computed from the illustration table because premiums are payable for whole of life."
+        : "Computed from annual premium and premium payment term where available.",
     },
     {
       label: "Protection amount",
@@ -158,10 +179,19 @@ function buildSections(facts: PolicyFact[]): DocumentAnalysisSection[] {
   const type = productType(facts);
   const annualPremium = numberFromFact(factById(facts, "annual-premium"));
   const premiumTerm = yearsFromFact(factById(facts, "premium-term"));
+  const totalPremiumsToAge85 = numberFromFact(factById(facts, "total-premiums-paid-age85"));
   const costRatio = distributionCostRatio(facts);
   const guaranteedBreakeven = estimateBreakeven(facts);
   const projectedBreakeven = estimateBreakeven(facts, "projected");
-  const distributionFacts = factsByIds(facts, "distribution-cost", "distribution-cost-notice");
+  const distributionFacts = factsByIds(
+    facts,
+    "distribution-cost",
+    "distribution-cost-yr1",
+    "distribution-cost-notice",
+    "premium-charge-yr1",
+    "premium-charge-yr2",
+    "premium-charge-yr3"
+  );
   const surrenderFacts = factsByIds(
     facts,
     "surrender-value-notice",
@@ -169,7 +199,8 @@ function buildSections(facts: PolicyFact[]): DocumentAnalysisSection[] {
     "surrender-value-yr10",
     "surrender-value-yr15",
     "surrender-value-yr20",
-    "projected-surrender-yr20"
+    "projected-surrender-yr20",
+    "projected-high-surrender-yr20"
   );
   const projectionFacts = facts.filter((fact) =>
     /projected|non-guaranteed|illustrated|return/i.test(`${fact.id} ${fact.label} ${fact.value}`)
@@ -179,15 +210,17 @@ function buildSections(facts: PolicyFact[]): DocumentAnalysisSection[] {
     {
       title: "Premium and commitment",
       body:
-        annualPremium && premiumTerm
-          ? `The document implies a total premium commitment of ${money(annualPremium * premiumTerm)} if premiums are paid for ${premiumTerm} years. This is a cash-flow fact, not advice on affordability.`
-          : "The document did not expose enough structured premium-term data to compute the full premium commitment. Ask the adviser to identify the total premium row and payment term.",
-      facts: factsByIds(facts, "annual-premium", "premium-term", "policy-term"),
+        annualPremium && totalPremiumsToAge85
+          ? `The illustration shows ${money(annualPremium)} per year and ${money(totalPremiumsToAge85)} total premiums paid by age 85. Because premiums are payable for whole of life, the commitment should be understood as an ongoing cash-flow obligation, not a fixed short payment term.`
+          : annualPremium && premiumTerm
+            ? `The document implies a total premium commitment of ${money(annualPremium * premiumTerm)} if premiums are paid for ${premiumTerm} years. This is a cash-flow fact, not advice on affordability.`
+            : "The document did not expose enough structured premium-term data to compute the full premium commitment. Ask the adviser to identify the total premium row and payment term.",
+      facts: factsByIds(facts, "annual-premium", "premium-term", "policy-term", "total-premiums-paid-age85"),
     },
     {
       title: "Distribution cost and adviser economics",
       body: costRatio
-        ? `The disclosed distribution cost is ${money(costRatio.distributionCost)}, equal to ${(costRatio.ratio * 100).toFixed(1)}% of the total premiums used in this calculation. This frames how much of the policy economics is distribution-related without judging the product.`
+        ? `The disclosed distribution cost to age 85 is ${money(costRatio.distributionCost)}, equal to ${(costRatio.ratio * 100).toFixed(1)}% of the total premiums used in this calculation. The first-year distribution cost is also high relative to the first annual premium, so this is a useful point to ask about without judging the product.`
         : "Distribution cost was not extracted cleanly enough for a ratio. The useful follow-up is to ask for the Total Distribution Cost table and whether it covers the basic plan only or riders too.",
       facts: distributionFacts,
     },
@@ -207,7 +240,7 @@ function buildSections(facts: PolicyFact[]): DocumentAnalysisSection[] {
       title: "Guaranteed versus projected values",
       body:
         projectionFacts.length > 0
-          ? "Projected or illustrated values are not the same as guaranteed values. Treat them as scenario outputs and ask which column is guaranteed, which is non-guaranteed, and what assumptions drive the gap."
+          ? "This GLA4 illustration is investment-linked: the policy value varies with the selected fund. The projected 4% and 8% values are scenario outputs, while the extracted guaranteed surrender value rows are S$0. Ask the adviser to separate guaranteed values, 4% illustrated values, and 8% illustrated values before relying on any return statement."
           : "No projected-value facts were extracted. If the policy has savings or investment value, ask for the guaranteed and non-guaranteed columns separately.",
       facts: projectionFacts,
     },
@@ -217,6 +250,7 @@ function buildSections(facts: PolicyFact[]): DocumentAnalysisSection[] {
 function buildSustainabilityQuestions(facts: PolicyFact[]): string[] {
   const annualPremium = numberFromFact(factById(facts, "annual-premium"));
   const premiumTerm = yearsFromFact(factById(facts, "premium-term"));
+  const totalPremiumsToAge85 = numberFromFact(factById(facts, "total-premiums-paid-age85"));
   const sumAssured = numberFromFact(factById(facts, "sum-assured", "death-benefit"));
   const costRatio = distributionCostRatio(facts);
   const guaranteedBreakeven = estimateBreakeven(facts);
@@ -226,7 +260,9 @@ function buildSustainabilityQuestions(facts: PolicyFact[]): string[] {
     annualPremium
       ? `If your income drops next year, can you still pay ${money(annualPremium)} per year without using emergency savings?`
       : "Can you identify the exact annual premium and payment frequency in the document?",
-    premiumTerm
+    totalPremiumsToAge85
+      ? `Are you comfortable with an illustration that shows ${money(totalPremiumsToAge85)} paid by age 85 if premiums continue?`
+      : premiumTerm
       ? `Are you comfortable committing to a ${premiumTerm}-year premium payment period?`
       : "Can your adviser confirm how many years premiums must be paid?",
     sumAssured

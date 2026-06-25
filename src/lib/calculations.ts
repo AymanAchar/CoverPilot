@@ -14,6 +14,14 @@ function toNumber(fact?: PolicyFact): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function yearsFromFact(fact?: PolicyFact): number | null {
+  if (!fact) return null;
+  const value = String(fact.value).toLowerCase();
+  if (value.includes("whole")) return null;
+  const parsed = Number(value.replace(/[^0-9.]/g, ""));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
 function money(value: number): string {
   return `S$${Math.round(value).toLocaleString("en-SG")}`;
 }
@@ -52,7 +60,7 @@ function projectedReturnCard(
   horizon: number
 ): CalculationCard | null {
   const annualPremiumValue = toNumber(annualPremium);
-  const premiumYears = toNumber(premiumTerm);
+  const premiumYears = yearsFromFact(premiumTerm) ?? horizon;
   const projected = toNumber(projectedValue);
   if (!annualPremiumValue || !projected || !premiumYears) return null;
 
@@ -84,26 +92,32 @@ export function runCalculations(facts: PolicyFact[]): CalculationCard[] {
 
   const annualPremium = findFact(facts, "annual-premium");
   const distCost = findFact(facts, "distribution-cost");
+  const distCostYr1 = findFact(facts, "distribution-cost-yr1");
   const premiumTerm = findFact(facts, "premium-term");
+  const totalPremiumsToAge85 = findFact(facts, "total-premiums-paid-age85");
   const svYr5 = findFact(facts, "surrender-value-yr5");
   const svYr10 = findFact(facts, "surrender-value-yr10");
   const svYr20 = findFact(facts, "surrender-value-yr20");
   const projSvYr20 = findFact(facts, "projected-surrender-yr20");
   const projSvYr25 = findFact(facts, "projected-surrender-yr25");
   const projSvYr30 = findFact(facts, "projected-surrender-yr30");
+  const projSvYr64 = findFact(facts, "projected-surrender-yr64");
 
   // 1. Total distribution cost as % of total premiums payable
-  if (annualPremium && distCost && premiumTerm) {
-    const totalPremiums =
-      (toNumber(annualPremium) ?? 0) * (toNumber(premiumTerm) ?? 0);
+  if (annualPremium && distCost && (premiumTerm || totalPremiumsToAge85)) {
+    const totalPremiums = totalPremiumsToAge85
+      ? (toNumber(totalPremiumsToAge85) ?? 0)
+      : (toNumber(annualPremium) ?? 0) * (yearsFromFact(premiumTerm) ?? 0);
     const distCostValue = toNumber(distCost) ?? 0;
     const pct = ((distCostValue / totalPremiums) * 100).toFixed(1);
     cards.push({
       id: "calc-dist-cost-pct",
       title: "Total Distribution Cost as % of Total Premiums",
-      formula: "Total Distribution Cost ÷ (Annual Premium × Premium Term) × 100",
+      formula: totalPremiumsToAge85
+        ? "Total Distribution Cost to age 85 ÷ Total Premiums Paid to age 85 × 100"
+        : "Total Distribution Cost ÷ (Annual Premium × Premium Term) × 100",
       result: `${money(distCostValue)} = ${pct}% of ${money(totalPremiums)} total premiums`,
-      inputs: [annualPremium, premiumTerm, distCost],
+      inputs: [annualPremium, ...(premiumTerm ? [premiumTerm] : []), ...(totalPremiumsToAge85 ? [totalPremiumsToAge85] : []), distCost],
       caveat:
         "Total Distribution Cost is the sum of distribution-related costs over the policy (e.g. commissions and benefits paid to the distribution channel), as disclosed in the policy illustration. It reduces the amount working for you, especially in the early years.",
     });
@@ -119,23 +133,41 @@ export function runCalculations(facts: PolicyFact[]): CalculationCard[] {
     });
   }
 
-  // 2. Total premiums paid by year 20
-  if (annualPremium && premiumTerm) {
-    const total = (toNumber(annualPremium) ?? 0) * (toNumber(premiumTerm) ?? 0);
+  // 2. Total premiums paid over the visible illustration horizon
+  if (annualPremium && (premiumTerm || totalPremiumsToAge85)) {
+    const total = totalPremiumsToAge85
+      ? (toNumber(totalPremiumsToAge85) ?? 0)
+      : (toNumber(annualPremium) ?? 0) * (yearsFromFact(premiumTerm) ?? 0);
     cards.push({
       id: "calc-total-premiums",
-      title: "Total Premiums Paid Over Premium Term",
-      formula: "Annual Premium × Premium Payment Term",
+      title: totalPremiumsToAge85 ? "Total Premiums Paid to Age 85" : "Total Premiums Paid Over Premium Term",
+      formula: totalPremiumsToAge85
+        ? "Document-stated total premiums paid to-date at age 85"
+        : "Annual Premium × Premium Payment Term",
       result: money(total),
-      inputs: [annualPremium, premiumTerm],
+      inputs: [annualPremium, ...(premiumTerm ? [premiumTerm] : []), ...(totalPremiumsToAge85 ? [totalPremiumsToAge85] : [])],
       caveat:
-        "This is the total cash outflow over the premium payment period, assuming no policy changes.",
+        "This is the visible cash outflow in the policy illustration, assuming no premium change, withdrawal, top-up, or lapse.",
+    });
+  }
+
+  if (annualPremium && distCostYr1) {
+    const firstYearPremium = toNumber(annualPremium) ?? 0;
+    const firstYearCost = toNumber(distCostYr1) ?? 0;
+    cards.push({
+      id: "calc-first-year-dist-cost",
+      title: "Year 1 Distribution Cost vs First Annual Premium",
+      formula: "Year 1 Distribution Cost ÷ Annual Premium × 100",
+      result: `${money(firstYearCost)} = ${((firstYearCost / firstYearPremium) * 100).toFixed(1)}% of first annual premium`,
+      inputs: [annualPremium, distCostYr1],
+      caveat:
+        "This is a document-stated distribution-cost figure, not an extra bill charged separately to the consumer. It is useful because it explains why early policy values can be low.",
     });
   }
 
   // 3. Guaranteed surrender value vs total premiums paid at year 20
-  if (annualPremium && premiumTerm && svYr20) {
-    const totalPaid = (toNumber(annualPremium) ?? 0) * (toNumber(premiumTerm) ?? 0);
+  if (annualPremium && svYr20) {
+    const totalPaid = (toNumber(annualPremium) ?? 0) * 20;
     const sv = toNumber(svYr20) ?? 0;
     const diff = sv - totalPaid;
     const diffStr =
@@ -146,9 +178,9 @@ export function runCalculations(facts: PolicyFact[]): CalculationCard[] {
       id: "calc-sv-vs-premiums-yr20",
       title: "Guaranteed Surrender Value vs Total Premiums at Year 20",
       formula:
-        "Guaranteed Surrender Value (Yr 20) − (Annual Premium × Premium Term)",
+        "Guaranteed Surrender Value (Yr 20) − Premiums Paid to Year 20",
       result: diffStr,
-      inputs: [annualPremium, premiumTerm, svYr20],
+      inputs: [annualPremium, svYr20],
       caveat:
         "Guaranteed values only. Non-guaranteed projected values are higher but not assured. Verify against your policy illustration.",
     });
@@ -157,7 +189,7 @@ export function runCalculations(facts: PolicyFact[]): CalculationCard[] {
   // 4. Breakeven year (when guaranteed surrender value first exceeds total premiums paid)
   if (annualPremium && svYr5 && svYr10 && svYr20) {
     const ap = toNumber(annualPremium) ?? 0;
-    const term = premiumTerm ? (toNumber(premiumTerm) ?? Infinity) : Infinity;
+    const term = premiumTerm ? (yearsFromFact(premiumTerm) ?? Infinity) : Infinity;
     const milestones = [
       { year: 5, sv: toNumber(svYr5) ?? 0 },
       { year: 10, sv: toNumber(svYr10) ?? 0 },
@@ -179,20 +211,20 @@ export function runCalculations(facts: PolicyFact[]): CalculationCard[] {
   }
 
   // 5. Projected (non-guaranteed) breakeven vs total premiums at year 20
-  if (annualPremium && premiumTerm && projSvYr20) {
-    const totalPaid = (toNumber(annualPremium) ?? 0) * (toNumber(premiumTerm) ?? 0);
+  if (annualPremium && projSvYr20) {
+    const totalPaid = (toNumber(annualPremium) ?? 0) * 20;
     const sv = toNumber(projSvYr20) ?? 0;
     const diff = sv - totalPaid;
     cards.push({
       id: "calc-projected-breakeven-signal",
       title: "Estimated Projected Breakeven Signal",
       formula:
-        "Projected Surrender Value (Yr 20) compared against Annual Premium × Premium Term",
+        "Projected Surrender Value (Yr 20) compared against premiums paid to Year 20",
       result:
         diff >= 0
           ? `Projected values catch up by year 20, with ${money(diff)} above total premiums paid`
           : `Projected values are still ${money(Math.abs(diff))} below total premiums paid at year 20`,
-      inputs: [annualPremium, premiumTerm, projSvYr20],
+      inputs: [annualPremium, projSvYr20],
       caveat:
         "This uses projected non-guaranteed values. It should be read as a scenario signal, not a guaranteed breakeven point or a recommendation.",
     });
@@ -200,14 +232,14 @@ export function runCalculations(facts: PolicyFact[]): CalculationCard[] {
       id: "calc-breakeven-projected",
       title: "Projected (Non-Guaranteed) Position at Year 20",
       formula:
-        "Projected Surrender Value (Yr 20) − (Annual Premium × Premium Term)",
+        "Projected Surrender Value (Yr 20) − Premiums Paid to Year 20",
       result:
         diff >= 0
           ? `${money(diff)} more than total premiums paid (projected)`
           : `${money(Math.abs(diff))} less than total premiums paid (projected)`,
-      inputs: [annualPremium, premiumTerm, projSvYr20],
+      inputs: [annualPremium, projSvYr20],
       caveat:
-        "Projected values include NON-GUARANTEED bonuses illustrated at 4.25% p.a. and are not assured — actual bonuses depend on the participating fund's performance. The guaranteed position (shown separately) is the contractual floor.",
+        "Projected values include NON-GUARANTEED values illustrated at 4.00% p.a. and are not assured — actual outcomes depend on the selected fund's performance. The guaranteed position (shown separately) is the contractual floor.",
     });
   }
 
@@ -218,7 +250,9 @@ export function runCalculations(facts: PolicyFact[]): CalculationCard[] {
         ? projectedReturnCard(annualPremium, premiumTerm, projSvYr25, 25)
         : annualPremium && projSvYr30
           ? projectedReturnCard(annualPremium, premiumTerm, projSvYr30, 30)
-          : null;
+          : annualPremium && projSvYr64
+            ? projectedReturnCard(annualPremium, premiumTerm, projSvYr64, 64)
+            : null;
 
   if (projectedReturn) cards.push(projectedReturn);
 

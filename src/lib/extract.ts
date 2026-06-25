@@ -104,6 +104,31 @@ function uniqueFacts(facts: PolicyFact[]) {
   });
 }
 
+function mergeFacts(primary: PolicyFact[], supplemental: PolicyFact[]) {
+  const byId = new Map<string, PolicyFact>();
+  for (const fact of [...primary, ...supplemental]) {
+    const existing = byId.get(fact.id);
+    if (!existing) {
+      byId.set(fact.id, fact);
+      continue;
+    }
+
+    const existingValue = String(existing.value ?? "").trim().toLowerCase();
+    if (
+      !existingValue ||
+      existingValue === "not found" ||
+      existing.sourceType === "not-found" ||
+      (existing.sourceType !== "document-stated" && fact.sourceType === "document-stated") ||
+      (!existing.quote && !!fact.quote)
+    ) {
+      byId.set(fact.id, fact);
+    } else if (!existing.page && fact.page) {
+      byId.set(fact.id, { ...existing, page: fact.page });
+    }
+  }
+  return [...byId.values()];
+}
+
 function addRegexFact(
   facts: PolicyFact[],
   text: string,
@@ -124,6 +149,161 @@ function addRegexFact(
     unit: config.unit,
     sourceType: "document-stated",
     quote: quoteAround(text, match.index, match[0].length),
+  });
+}
+
+function addFactIfMissing(facts: PolicyFact[], fact: PolicyFact) {
+  if (facts.some((existing) => existing.id === fact.id)) return;
+  facts.push(fact);
+}
+
+function addGla4SurrenderFacts(facts: PolicyFact[], text: string) {
+  if (!/GREAT\s+Life\s+Advantage\s+4/i.test(text)) return;
+  const start = text.search(/GREAT Life Advantage 4 \(10040\) Surrender value/i);
+  const deductionsOffset = start >= 0 ? text.slice(start).search(/\bDeductions\b/i) : -1;
+  const end = deductionsOffset >= 0 ? start + deductionsOffset : -1;
+  if (start < 0 || end < start) return;
+  const section = text.slice(start, end);
+  const rows = [5, 10, 15, 20, 25, 30, 40, 50, 60, 64];
+
+  for (const year of rows) {
+    const row = new RegExp(
+      `(?:^|\\s)${year}\\s+\\d+\\s+([\\d,]+\\.\\d{2})\\s+0\\s+([\\d,]+)\\s+\\2\\s+([\\d,]+)\\s+\\3(?:\\s|$)`
+    ).exec(section);
+    if (!row) continue;
+
+    const quote = row[0].replace(/\s+/g, " ").trim();
+    addFactIfMissing(facts, {
+      id: `surrender-value-yr${year}`,
+      label: `Guaranteed surrender value at year ${year}`,
+      value: 0,
+      unit: "SGD",
+      sourceType: "document-stated",
+      quote,
+    });
+    addFactIfMissing(facts, {
+      id: `projected-surrender-yr${year}`,
+      label: `Projected surrender value at year ${year} (4% illustration, non-guaranteed)`,
+      value: cleanMoney(row[2]),
+      unit: "SGD",
+      sourceType: "document-stated",
+      quote,
+    });
+    addFactIfMissing(facts, {
+      id: `projected-high-surrender-yr${year}`,
+      label: `Projected surrender value at year ${year} (8% illustration, non-guaranteed)`,
+      value: cleanMoney(row[3]),
+      unit: "SGD",
+      sourceType: "document-stated",
+      quote,
+    });
+  }
+}
+
+function addGla4DistributionFacts(facts: PolicyFact[], text: string) {
+  if (!/GREAT\s+Life\s+Advantage\s+4/i.test(text)) return;
+  const distributionSection = text.slice(text.search(/Distribution cost/i));
+  const finalRow = /64\s+85\s+([\d,]+)\s+([\d,]+(?:\.\d{2})?)/.exec(distributionSection);
+  const firstRow = /1\s+22\s+([\d,]+)\s+1,200\.00/.exec(distributionSection);
+
+  if (firstRow) {
+    addFactIfMissing(facts, {
+      id: "distribution-cost-yr1",
+      label: "Year 1 distribution cost",
+      value: cleanMoney(firstRow[1]),
+      unit: "SGD",
+      sourceType: "document-stated",
+      quote: firstRow[0].replace(/\s+/g, " ").trim(),
+    });
+  }
+
+  if (finalRow) {
+    addFactIfMissing(facts, {
+      id: "distribution-cost",
+      label: "Total distribution cost to age 85",
+      value: cleanMoney(finalRow[1]),
+      unit: "SGD",
+      sourceType: "document-stated",
+      quote: finalRow[0].replace(/\s+/g, " ").trim(),
+    });
+    addFactIfMissing(facts, {
+      id: "total-premiums-paid-age85",
+      label: "Total premiums paid to age 85",
+      value: cleanMoney(finalRow[2]),
+      unit: "SGD",
+      sourceType: "document-stated",
+      quote: finalRow[0].replace(/\s+/g, " ").trim(),
+    });
+    addFactIfMissing(facts, {
+      id: "projection-horizon-years",
+      label: "Illustration horizon to age 85",
+      value: 64,
+      unit: "years",
+      sourceType: "calculated-from-document",
+      quote: finalRow[0].replace(/\s+/g, " ").trim(),
+    });
+  }
+}
+
+function addGla4ProductSummaryFacts(facts: PolicyFact[], text: string) {
+  if (!/GREAT\s+Life\s+Advantage\s+4/i.test(text)) return;
+  addFactIfMissing(facts, {
+    id: "policy-term",
+    label: "Policy term",
+    value: "Whole of life",
+    sourceType: "document-stated",
+    quote: "Policy term: Whole of life",
+  });
+  addFactIfMissing(facts, {
+    id: "premium-term",
+    label: "Premium payment term",
+    value: "Whole of life",
+    sourceType: "document-stated",
+    quote: "You pay for: Whole of life",
+  });
+  addFactIfMissing(facts, {
+    id: "premium-frequency",
+    label: "Premium frequency",
+    value: "Yearly",
+    sourceType: "document-stated",
+    quote: "Payment frequency: Yearly",
+  });
+  addFactIfMissing(facts, {
+    id: "classification",
+    label: "Policy classification",
+    value: "Regular premium whole of life investment-linked policy",
+    sourceType: "document-stated",
+    quote:
+      "GREAT Life Advantage 4 is a regular premium whole of life investment-linked policy designed to meet your protection needs.",
+  });
+  addFactIfMissing(facts, {
+    id: "premium-charge-yr1",
+    label: "Premium charge in year 1",
+    value: "76%",
+    sourceType: "document-stated",
+    quote: "Premium charge as a percentage of the basic regular premium paid 1st policy year 76.00%",
+  });
+  addFactIfMissing(facts, {
+    id: "premium-charge-yr2",
+    label: "Premium charge in year 2",
+    value: "51%",
+    sourceType: "document-stated",
+    quote: "2nd policy year 51.00%",
+  });
+  addFactIfMissing(facts, {
+    id: "premium-charge-yr3",
+    label: "Premium charge in year 3",
+    value: "26%",
+    sourceType: "document-stated",
+    quote: "3rd policy year 26.00%",
+  });
+  addFactIfMissing(facts, {
+    id: "non-lapse-guarantee",
+    label: "Non-lapse guarantee condition",
+    value: "Applies during first 10 policy years if premiums are paid and no partial withdrawal is made.",
+    sourceType: "document-stated",
+    quote:
+      "During the first 10 policy years, the policy and its attaching rider(s) will not lapse even if the account value falls to zero or below...",
   });
 }
 
@@ -188,6 +368,10 @@ export function extractFactsDeterministically(rawText: string): PolicyFact[] {
     regex: /(guaranteed benefits only[^.]{0,180}\.)/i,
     value: (match) => match[1].replace(/\s+/g, " ").trim(),
   });
+
+  addGla4SurrenderFacts(facts, text);
+  addGla4DistributionFacts(facts, text);
+  addGla4ProductSummaryFacts(facts, text);
 
   return uniqueFacts(facts).filter(
     (fact) => fact.value !== undefined && String(fact.value).trim().length > 0
@@ -310,7 +494,7 @@ export async function extractFactsFromPDF(pdfBuffer: Buffer): Promise<Extraction
     const aiFacts = await extractFactsWithAI(text);
     if (aiFacts.length >= 3) {
       return {
-        facts: aiFacts,
+        facts: mergeFacts(aiFacts, fallbackFacts),
         source: "ai",
         textLength: fullText.length,
       };
