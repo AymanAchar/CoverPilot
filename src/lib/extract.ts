@@ -469,11 +469,20 @@ export async function extractTextFromPDF(pdfBuffer: Buffer): Promise<string> {
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
   const { pathToFileURL } = await import("node:url");
   const path = await import("node:path");
+  const ensureTrailingSeparator = (filePath: string) =>
+    filePath.endsWith(path.sep) ? filePath : `${filePath}${path.sep}`;
+  const pdfjsRoot = path.join(process.cwd(), "node_modules/pdfjs-dist");
   pdfjs.GlobalWorkerOptions.workerSrc = pathToFileURL(
-    path.join(process.cwd(), "node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs")
+    path.join(pdfjsRoot, "legacy/build/pdf.worker.mjs")
   ).href;
   const data = new Uint8Array(pdfBuffer);
-  const doc = await pdfjs.getDocument({ data }).promise;
+  const doc = await pdfjs.getDocument({
+    data,
+    cMapPacked: true,
+    cMapUrl: ensureTrailingSeparator(path.join(pdfjsRoot, "cmaps")),
+    standardFontDataUrl: ensureTrailingSeparator(path.join(pdfjsRoot, "standard_fonts")),
+    wasmUrl: ensureTrailingSeparator(path.join(pdfjsRoot, "wasm")),
+  }).promise;
   const pageTexts: string[] = [];
 
   try {
