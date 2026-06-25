@@ -72,6 +72,7 @@ test("policy extraction has deterministic fallback when OpenAI fails", async () 
 
   assert.match(extract, /extractFactsDeterministically/);
   assert.match(extract, /deterministic-fallback/);
+  assert.match(extract, /hasHighConfidenceDeterministicFacts/);
   assert.match(extract, /OPENAI_MODEL/);
   assert.doesNotMatch(extractRoute, /PDF upload extraction requires OPENAI_API_KEY/);
   assert.match(extractRoute, /fallback: result\.source === "deterministic-fallback"/);
